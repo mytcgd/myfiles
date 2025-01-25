@@ -14,7 +14,13 @@ general_upload_data() {
     reality_url="vless://${UUID}@${MYIP}:${REAL_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${public_key}&type=tcp&headerType=none#${country_abbreviation}-${SUB_NAME}-realitytcp"
   fi
 
-  UPLOAD_DATA="$vless_url"
+  if [ -n "${VMESS_WSPATH}" ] && [ -z "${VLESS_WSPATH}" ]; then
+    UPLOAD_DATA="$vmess_url"
+  fi
+
+  if [ -n "${VLESS_WSPATH}" ] && [ -z "${VMESS_WSPATH}" ]; then
+    UPLOAD_DATA="$vless_url"
+  fi
 
   if [ -n "$HY2_PORT" ]; then
     UPLOAD_DATA="$UPLOAD_DATA\n$hysteria_url"
