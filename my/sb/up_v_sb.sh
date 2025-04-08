@@ -58,7 +58,6 @@ if source /root/env.yml; then
 
   if [ -n "$ANYTLS_PORT" ]; then
     UPLOAD_DATA="$UPLOAD_DATA\n$anytls_url"
-    echo "${anytls_url}" >> ${FILE_PATH}/list.txt
   fi
 
   export UPLOAD_DATA
