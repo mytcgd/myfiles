@@ -8,10 +8,12 @@ general_upload_data() {
     hysteria_url="hysteria2://${UUID}@${MY_DOMAIN}:${HY2_PORT}/?sni=www.bing.com&alpn=h3&insecure=1#${country_abbreviation}-${SUB_NAME}"
     tuic_url="tuic://${UUID}:${tuicpass}@${MY_DOMAIN}:${TUIC_PORT}?sni=www.bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#${country_abbreviation}-${SUB_NAME}"
     reality_url="vless://${UUID}@${MY_DOMAIN}:${REAL_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${public_key}&type=tcp&headerType=none#${country_abbreviation}-${SUB_NAME}-realitytcp"
+    anytls_url="anytls://${UUID}@${MY_DOMAIN}:${ANYTLS_PORT}?insecure=1&udp=1#${country_abbreviation}-${SUB_NAME}"
   else
     hysteria_url="hysteria2://${UUID}@${MYIP}:${HY2_PORT}/?sni=www.bing.com&alpn=h3&insecure=1#${country_abbreviation}-${SUB_NAME}"
     tuic_url="tuic://${UUID}:${tuicpass}@${MYIP}:${TUIC_PORT}?sni=www.bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#${country_abbreviation}-${SUB_NAME}"
     reality_url="vless://${UUID}@${MYIP}:${REAL_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${public_key}&type=tcp&headerType=none#${country_abbreviation}-${SUB_NAME}-realitytcp"
+    anytls_url="anytls://${UUID}@${MYIP}:${ANYTLS_PORT}?insecure=1&udp=1#${country_abbreviation}-${SUB_NAME}"
   fi
 
   if [ -n "${VMESS_WSPATH}" ] && [ -z "${VLESS_WSPATH}" ]; then
@@ -32,6 +34,10 @@ general_upload_data() {
 
   if [ -n "$REAL_PORT" ]; then
     UPLOAD_DATA="$UPLOAD_DATA\n$reality_url"
+  fi
+
+  if [ -n "$ANYTLS_PORT" ]; then
+    UPLOAD_DATA="$UPLOAD_DATA\n$anytls_url"
   fi
 
   export UPLOAD_DATA
