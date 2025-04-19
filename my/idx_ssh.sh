@@ -58,7 +58,7 @@ sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g;s/^#\?PasswordAuthenticati
 echo -e "${YELLOW}[7/8] 正在重启 SSH 服务并设置 ngrok 隧道...${RESET}"
 systemctl restart ssh
 wget https://github.com/mytcgd/myfiles/releases/download/ngrok/ngrok-v3-stable-linux-amd64.tgz -qO- | tar -xz -C /usr/local/bin
-nohup ngrok tcp 22 --authtoken=${NGROK_TOKEN} &>/dev/null &
+nohup ngrok tcp 22 add-authtoken ${NGROK_TOKEN} &>/dev/null &
 
 echo -e "${YELLOW}等待 ngrok 服务启动...${RESET}"
 sleep 5
