@@ -1,3 +1,5 @@
+bash <(wget -qO- https://raw.githubusercontent.com/fscarmen/tools/main/idx_ssh.sh)
+
 ngrok config add-authtoken 2vwHctxgit7fMjYGQ6OcID8ax1O_5D2stCnqD9HA7EULj3an7
 
 2vwHctxgit7fMjYGQ6OcID8ax1O_5D2stCnqD9HA7EULj3an7
