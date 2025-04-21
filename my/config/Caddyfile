@@ -1,25 +1,17 @@
-${MY_DOMAIN} {
-    @mywebsocket {
-        path /${VLESS_WSPATH}
-        header Connection *Upgrade*
-        header Upgrade websocket
-    }
-    reverse_proxy @mywebsocket localhost:${V_PORT}
-}
-
 :${PORT} {
   root * /app/web
-  file_server browse
-
-  handle / {
-    file_server {
-      root /app/web
-      index index.html
-    }
+  file_server browse {
+    index index.html
   }
 
-  # Add healthcheck endpoint
   handle /healthcheck {
     respond "ok"
   }
+
+  @mywebsocket {
+    path /${VLESS_WSPATH}
+    header Connection *Upgrade*
+    header Upgrade websocket
+  }
+  reverse_proxy @mywebsocket localhost:${V_PORT}
 }
