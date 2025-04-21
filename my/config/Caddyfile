@@ -11,7 +11,7 @@ $MY_DOMAIN {
   root * /app/web
   file_server browse
 
-  # Serve the main homepage
+  # Server the main homepage
   handle / {
     file_server {
       root /app/web
