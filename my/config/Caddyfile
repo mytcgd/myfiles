@@ -1,4 +1,4 @@
-$MY_DOMAIN {
+${MY_DOMAIN} {
     @mywebsocket {
         path /${VLESS_WSPATH}
         header Connection *Upgrade*
