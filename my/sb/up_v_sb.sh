@@ -36,7 +36,7 @@ if source /root/env.yml; then
   reality_url="vless://${UUID}@${MYIP}:${REAL_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${public_key}&type=tcp&headerType=none#${country_abbreviation}-${SUB_NAME}-realitytcp"
   anytls_url="anytls://${UUID}@${MYIP}:${ANYTLS_PORT}?insecure=1&udp=1#${country_abbreviation}-${SUB_NAME}"
 
-  if [ -n "${VPORT}" ]; then
+  if [ -n "${V_PORT}" ]; then
     if [ -n "${VMESS_WSPATH}" ] && [ -z "${VLESS_WSPATH}" ]; then
       UPLOAD_DATA="$vmess_url"
     fi
