@@ -46,12 +46,6 @@ if source /root/env.yml; then
     UPLOAD_DATA="$UPLOAD_DATA\n$reality_url"
   fi
 
-  if [ -n "$SOCKS_PORT" ]; then
-    BASE64_CREDENTIALS=$(echo -n "${SOCKS_USER}:${SOCKS_PASS}" | base64)
-    socks5_url="socks://${BASE64_CREDENTIALS}@${MYIP}:${SOCKS_PORT}#${country_abbreviation}-${SUB_NAME}"
-    UPLOAD_DATA="$UPLOAD_DATA\n$socks5_url"
-  fi
-
   export UPLOAD_DATA
   # echo -e "${UPLOAD_DATA}"
 
