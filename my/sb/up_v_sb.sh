@@ -28,6 +28,9 @@ if source /root/env.yml; then
   fi
 
   if [ -n "${VPORT}" ]; then
+    if [ -n "$MY_DOMAIN" ] && [ -z "${ARGO_DOMAIN}" ]; then
+      export ARGO_DOMAIN="$MY_DOMAIN"
+    fi
     if [ -n "${VMESS_WSPATH}" ] && [ -z "${VLESS_WSPATH}" ]; then
       VMESS="{ \"v\": \"2\", \"ps\": \"${country_abbreviation}-${SUB_NAME}\", \"add\": \"${CF_IP}\", \"port\": \"${CFPORT}\", \"id\": \"${UUID}\", \"aid\": \"0\", \"scy\": \"none\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"${ARGO_DOMAIN}\", \"path\": \"/${VMESS_WSPATH}?ed=2048\", \"tls\": \"tls\", \"sni\": \"${ARGO_DOMAIN}\", \"alpn\": \"\", \"fp\": \"randomized\"}"
       vmess_url="vmess://$(echo "$VMESS" | base64 | tr -d '\n')"
