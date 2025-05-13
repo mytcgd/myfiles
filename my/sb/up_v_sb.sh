@@ -27,7 +27,7 @@ if source /root/env.yml; then
     # export ARGO_DOMAIN=$(cat ${FILE_PATH}/argo.log | grep -o "https://.*trycloudflare.com" | tail -n 1 | sed 's/https:\/\///')
   fi
 
-  if [ -n "${VPORT}" ]; then
+  if [ -n "${V_PORT}" ]; then
     if [ -n "$MY_DOMAIN" ] && [ -z "${ARGO_DOMAIN}" ]; then
       export ARGO_DOMAIN="$MY_DOMAIN"
     fi
