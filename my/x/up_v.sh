@@ -28,6 +28,9 @@ if source /root/env.yml; then
   fi
 
   if [ -n "$V_PORT" ]; then
+    if [ -n "$MY_DOMAIN" ] && [ -z "${ARGO_DOMAIN}" ]; then
+      export ARGO_DOMAIN="$MY_DOMAIN"
+    fi
     if [ -n "${VLESS_WSPATH}" ] && [ -z "${XHTTP_PATH}" ]; then
     vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2048&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${country_abbreviation}-${SUB_NAME}"
     UPLOAD_DATA="$vless_url"
