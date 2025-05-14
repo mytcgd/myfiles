@@ -28,7 +28,6 @@ general_upload_data() {
   if [ -n "$ANYTLS_PORT" ]; then
     UPLOAD_DATA="$UPLOAD_DATA\n$anytls_url"
   fi
-  export UPLOAD_DATA
 }
 
 upload_url_data() {
