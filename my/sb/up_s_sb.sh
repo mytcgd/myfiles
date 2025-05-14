@@ -2,9 +2,6 @@
 
 general_upload_data() {
   if [ -n "${V_PORT}" ]; then
-    if [ -n "$LOCAL_DOMAIN" ]; then
-      export MYIP="$LOCAL_DOMAIN"
-    fi
     if [ -n "${VMESS_WSPATH}" ] && [ -z "${VLESS_WSPATH}" ]; then
       VMESS="{ \"v\": \"2\", \"ps\": \"${country_abbreviation}-${SUB_NAME}\", \"add\": \"${CF_IP}\", \"port\": \"${CFPORT}\", \"id\": \"${UUID}\", \"aid\": \"0\", \"scy\": \"none\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"${ARGO_DOMAIN}\", \"path\": \"/${VMESS_WSPATH}?ed=2048\", \"tls\": \"tls\", \"sni\": \"${ARGO_DOMAIN}\", \"alpn\": \"\", \"fp\": \"randomized\"}"
       export vmess_url="vmess://$(echo "$VMESS" | base64 | tr -d '\n')"
