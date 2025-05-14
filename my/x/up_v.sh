@@ -49,9 +49,6 @@ if source /root/env.yml; then
     UPLOAD_DATA="$UPLOAD_DATA\n$reality_url"
   fi
 
-  export UPLOAD_DATA
-  # echo -e "${UPLOAD_DATA}"
-
   upload_url_data "${SUB_URL}" "${SUB_NAME}" "${UPLOAD_DATA}"
   # echo "upload ok!"
 
