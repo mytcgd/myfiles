@@ -4,18 +4,18 @@ general_upload_data() {
   if [ -n "${V_PORT}" ]; then
     if [ -n "${VLESS_WSPATH}" ] && [ -z "${XHTTP_PATH}" ]; then
       export vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2048&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${country_abbreviation}-${SUB_NAME}"
-      UPLOAD_DATA="$vless_url"
+      UPLOAD_DATA="${vless_url}"
     fi
     if [ -n "${XHTTP_PATH}" ] && [ -z "${VLESS_WSPATH}" ]; then
       export xhttp_url="vless://${UUID}@${CF_IP}:${CFPORT}?encryption=none&security=tls&sni=${ARGO_DOMAIN}&type=xhttp&host=${ARGO_DOMAIN}&path=%2F${XHTTP_PATH}%3Fed%3D2048&mode=packet-up#${country_abbreviation}-${SUB_NAME}-xhttp"
-      UPLOAD_DATA="$xhttp_url"
+      UPLOAD_DATA="${xhttp_url}"
     fi
   fi
   if [ -n "$REAL_PORT" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n$reality_url"
+    UPLOAD_DATA="$UPLOAD_DATA\n${reality_url}"
   fi
   if [ -n "$SOCKS_PORT" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n$socks5_url"
+    UPLOAD_DATA="$UPLOAD_DATA\n${socks5_url}"
   fi
 }
 
