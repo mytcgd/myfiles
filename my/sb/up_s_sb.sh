@@ -14,19 +14,19 @@ general_upload_data() {
   fi
 
   if [ -n "${HY2_PORT}" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n${hysteria_url}"
+    UPLOAD_DATA="${UPLOAD_DATA}\n${hysteria_url}"
   fi
   if [ -n "${TUIC_PORT}" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n${tuic_url}"
+    UPLOAD_DATA="${UPLOAD_DATA}\n${tuic_url}"
   fi
   if [ -n "${REAL_PORT}" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n${reality_url}"
+    UPLOAD_DATA="${UPLOAD_DATA}\n${reality_url}"
   fi
   if [ -n "${SOCKS_PORT}" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n${socks5_url}"
+    UPLOAD_DATA="${UPLOAD_DATA}\n${socks5_url}"
   fi
   if [ -n "${ANYTLS_PORT}" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n${anytls_url}"
+    UPLOAD_DATA="${UPLOAD_DATA}\n${anytls_url}"
   fi
 }
 
