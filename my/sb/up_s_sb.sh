@@ -5,28 +5,28 @@ general_upload_data() {
     if [ -n "${VMESS_WSPATH}" ] && [ -z "${VLESS_WSPATH}" ]; then
       VMESS="{ \"v\": \"2\", \"ps\": \"${country_abbreviation}-${SUB_NAME}\", \"add\": \"${CF_IP}\", \"port\": \"${CFPORT}\", \"id\": \"${UUID}\", \"aid\": \"0\", \"scy\": \"none\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"${ARGO_DOMAIN}\", \"path\": \"/${VMESS_WSPATH}?ed=2048\", \"tls\": \"tls\", \"sni\": \"${ARGO_DOMAIN}\", \"alpn\": \"\", \"fp\": \"randomized\"}"
       export vmess_url="vmess://$(echo "$VMESS" | base64 | tr -d '\n')"
-      UPLOAD_DATA="$vmess_url"
+      UPLOAD_DATA="${vmess_url}"
     fi
     if [ -n "${VLESS_WSPATH}" ] && [ -z "${VMESS_WSPATH}" ]; then
       export vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2048&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${country_abbreviation}-${SUB_NAME}"
-      UPLOAD_DATA="$vless_url"
+      UPLOAD_DATA="${vless_url}"
     fi
   fi
 
-  if [ -n "$HY2_PORT" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n$hysteria_url"
+  if [ -n "${HY2_PORT}" ]; then
+    UPLOAD_DATA="$UPLOAD_DATA\n${hysteria_url}"
   fi
-  if [ -n "$TUIC_PORT" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n$tuic_url"
+  if [ -n "${TUIC_PORT}" ]; then
+    UPLOAD_DATA="$UPLOAD_DATA\n${tuic_url}"
   fi
-  if [ -n "$REAL_PORT" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n$reality_url"
+  if [ -n "${REAL_PORT}" ]; then
+    UPLOAD_DATA="$UPLOAD_DATA\n${reality_url}"
   fi
-  if [ -n "$SOCKS_PORT" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n$socks5_url"
+  if [ -n "${SOCKS_PORT}" ]; then
+    UPLOAD_DATA="$UPLOAD_DATA\n${socks5_url}"
   fi
-  if [ -n "$ANYTLS_PORT" ]; then
-    UPLOAD_DATA="$UPLOAD_DATA\n$anytls_url"
+  if [ -n "${ANYTLS_PORT}" ]; then
+    UPLOAD_DATA="$UPLOAD_DATA\n${anytls_url}"
   fi
 }
 
