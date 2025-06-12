@@ -32,20 +32,20 @@ if source /root/.env; then
       export ARGO_DOMAIN="$MY_DOMAIN"
     fi
     if [ -n "${VLESS_WSPATH}" ] && [ -z "${XHTTP_PATH}" ]; then
-    vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2560&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${country_abbreviation}-${SUB_NAME}"
+    vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2560&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${ISP}-${SUB_NAME}"
     UPLOAD_DATA="$vless_url"
     fi
     if [ -n "${XHTTP_PATH}" ] && [ -z "${VLESS_WSPATH}" ]; then
-    xhttp_url="vless://${UUID}@${CF_IP}:${CFPORT}?encryption=none&security=tls&sni=${ARGO_DOMAIN}&type=xhttp&host=${ARGO_DOMAIN}&path=%2F${XHTTP_PATH}%3Fed%3D2560&mode=packet-up#${country_abbreviation}-${SUB_NAME}-xhttp"
+    xhttp_url="vless://${UUID}@${CF_IP}:${CFPORT}?encryption=none&security=tls&sni=${ARGO_DOMAIN}&type=xhttp&host=${ARGO_DOMAIN}&path=%2F${XHTTP_PATH}%3Fed%3D2560&mode=packet-up#${ISP}-${SUB_NAME}-xhttp"
     UPLOAD_DATA="$xhttp_url"
     fi
   fi
 
   if [ -n "$REAL_PORT" ] && [ -n "$shortid" ]; then
-    reality_url="vless://${UUID}@${MYIP}:${REAL_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${PublicKey}&sid=${shortid}&type=tcp&headerType=none#${country_abbreviation}-${SUB_NAME}-realtcp"
+    reality_url="vless://${UUID}@${MYIP}:${REAL_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${PublicKey}&sid=${shortid}&type=tcp&headerType=none#${ISP}-${SUB_NAME}-realtcp"
     UPLOAD_DATA="$UPLOAD_DATA\n$reality_url"
   elif [ -n "$REAL_PORT" ] && [ -z "$shortid" ]; then
-    reality_url="vless://${UUID}@${MYIP}:${REAL_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${PublicKey}&type=tcp&headerType=none#${country_abbreviation}-${SUB_NAME}-realtcp"
+    reality_url="vless://${UUID}@${MYIP}:${REAL_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${PublicKey}&type=tcp&headerType=none#${ISP}-${SUB_NAME}-realtcp"
     UPLOAD_DATA="$UPLOAD_DATA\n$reality_url"
   fi
 
