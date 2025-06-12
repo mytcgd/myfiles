@@ -24,7 +24,6 @@ if source /root/.env; then
 
   if [ -s "${FILE_PATH}/argo.log" ]; then
     export ARGO_DOMAIN=$(cat ${FILE_PATH}/argo.log | grep -o "info.*https://.*trycloudflare.com" | sed "s@.*https://@@g" | tail -n 1)
-    # export ARGO_DOMAIN=$(cat ${FILE_PATH}/argo.log | grep -o "https://.*trycloudflare.com" | tail -n 1 | sed 's/https:\/\///')
   fi
 
   if [ -n "${V_PORT}" ]; then
@@ -35,8 +34,7 @@ if source /root/.env; then
       VMESS="{ \"v\": \"2\", \"ps\": \"${ISP}-${SUB_NAME}\", \"add\": \"${CF_IP}\", \"port\": \"${CFPORT}\", \"id\": \"${UUID}\", \"aid\": \"0\", \"scy\": \"none\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"${ARGO_DOMAIN}\", \"path\": \"/${VMESS_WSPATH}?ed=2560\", \"tls\": \"tls\", \"sni\": \"${ARGO_DOMAIN}\", \"alpn\": \"\", \"fp\": \"randomized\"}"
       vmess_url="vmess://$(echo "$VMESS" | base64 | tr -d '\n')"
       UPLOAD_DATA="$vmess_url"
-    fi
-    if [ -n "${VLESS_WSPATH}" ] && [ -z "${VMESS_WSPATH}" ]; then
+    elif [ -n "${VLESS_WSPATH}" ] && [ -z "${VMESS_WSPATH}" ]; then
       vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2560&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${ISP}-${SUB_NAME}"
       UPLOAD_DATA="$vless_url"
     fi
@@ -63,7 +61,6 @@ if source /root/.env; then
   fi
 
   upload_url_data "${SUB_URL}" "${SUB_NAME}" "${UPLOAD_DATA}"
-  # echo "upload ok!"
 
   sleep 100
   done
