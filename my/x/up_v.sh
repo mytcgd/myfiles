@@ -24,7 +24,6 @@ if source /root/.env; then
 
   if [ -s "${FILE_PATH}/argo.log" ]; then
     export ARGO_DOMAIN=$(cat ${FILE_PATH}/argo.log | grep -o "info.*https://.*trycloudflare.com" | sed "s@.*https://@@g" | tail -n 1)
-    # export ARGO_DOMAIN=$(cat ${FILE_PATH}/argo.log | grep -o "https://.*trycloudflare.com" | tail -n 1 | sed 's/https:\/\///')
   fi
 
   if [ -n "$V_PORT" ]; then
@@ -34,8 +33,7 @@ if source /root/.env; then
     if [ -n "${VLESS_WSPATH}" ] && [ -z "${XHTTP_PATH}" ]; then
     vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2560&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${ISP}-${SUB_NAME}"
     UPLOAD_DATA="$vless_url"
-    fi
-    if [ -n "${XHTTP_PATH}" ] && [ -z "${VLESS_WSPATH}" ]; then
+    elif [ -n "${XHTTP_PATH}" ] && [ -z "${VLESS_WSPATH}" ]; then
     xhttp_url="vless://${UUID}@${CF_IP}:${CFPORT}?encryption=none&security=tls&sni=${ARGO_DOMAIN}&type=xhttp&host=${ARGO_DOMAIN}&path=%2F${XHTTP_PATH}%3Fed%3D2560&mode=packet-up#${ISP}-${SUB_NAME}-xhttp"
     UPLOAD_DATA="$xhttp_url"
     fi
@@ -50,7 +48,6 @@ if source /root/.env; then
   fi
 
   upload_url_data "${SUB_URL}" "${SUB_NAME}" "${UPLOAD_DATA}"
-  # echo "upload ok!"
 
   sleep 100
   done
