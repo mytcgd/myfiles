@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if source /root/env.yml; then
+if source /root/.env; then
   while true
   do
 
