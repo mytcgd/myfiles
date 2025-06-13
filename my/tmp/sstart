@@ -10,7 +10,6 @@ purple() { echo -e "\e[1;35m$1\033[0m"; }
 export CFPORT=${CFPORT:-'8443'}
 export CF_IP=${CF_IP:-'ip.sb'}
 export FILE_PATH=${FILE_PATH:-'./.tmp'}
-export checkapp=${checkapp:-''}
 export openkeepalive=${openkeepalive:-'1'}
 export openserver=${openserver:-'1'}
 
@@ -174,17 +173,7 @@ ABC
             "transport": {
                 "type": "ws",
                 "path": "/${VLESS_WSPATH}",
-                "max_early_data": 2048,
                 "early_data_header_name": "Sec-WebSocket-Protocol"
-            },
-            "multiplex": {
-                "enabled": true,
-                "padding": true,
-                "brutal": {
-                    "enabled": true,
-                    "up_mbps": 1000,
-                    "down_mbps": 1000
-                }
             }
         }
     ]
@@ -459,48 +448,34 @@ run_npm() {
   esac
 }
 
-detect_process() {
+Detect_process() {
   local process_name="$1"
-  local method="${2:-ps}"
   local pids=""
-
-  case "$method" in
-    pidof)
-      if command -v pidof >/dev/null 2>&1; then
-        pids=$(pidof "$process_name" 2>/dev/null)
-      fi
-      ;;
-    pgrep)
-      if command -v pgrep >/dev/null 2>&1; then
-        pids=$(pgrep -f "$process_name" 2>/dev/null)
-      fi
-      ;;
-    ps)
-      if command -v ps >/dev/null 2>&1; then
-        pids=$(ps -eo pid,comm | awk -v name="$process_name" '$2 == name {print $1}')
-      fi
-      ;;
-    *)
-      echo "Invalid method: $method" >&2; return 1 ;;
-  esac
+  if command -v ps >/dev/null 2>&1; then
+    pids=$(ps -eo pid,comm | awk -v name="$process_name" '$2 == name {print $1}')
+  elif command -v pidof >/dev/null 2>&1; then
+    pids=$(pidof "$process_name" 2>/dev/null)
+  elif command -v pgrep >/dev/null 2>&1; then
+    pids=$(pgrep -f "$process_name" 2>/dev/null)
+  fi
 
   [ -n "$pids" ] && echo "$pids"
 }
 
 keep_alive() {
   while true; do
-    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ -z "$(detect_process "${argo_randomness}" "$checkapp")" ]; then
+    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ "${openserver}" -eq 1 ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
       run_argo
       sleep 5
       check_hostname_change
       # build_urls
     fi
     sleep 5
-    if [ -e "${FILE_PATH}/${web_randomness}" ] && [ -z "$(detect_process "${web_randomness}" "$checkapp")" ]; then
+    if [ -e "${FILE_PATH}/${web_randomness}" ] && [ -z "$(Detect_process "${web_randomness}")" ]; then
       run_web
     fi
     sleep 5
-    if [ -e "${FILE_PATH}/${npm_randomness}" ] && [ -n "${NEZHA_SERVER}" ] && [ -n "${NEZHA_KEY}" ] && [ -z "$(detect_process "${npm_randomness}" "$checkapp")" ]; then
+    if [ -e "${FILE_PATH}/${npm_randomness}" ] && [ -n "${NEZHA_SERVER}" ] && [ -n "${NEZHA_KEY}" ] && [ -z "$(Detect_process "${npm_randomness}")" ]; then
       run_npm
     fi
     sleep 50
