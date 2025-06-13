@@ -451,10 +451,10 @@ run_npm() {
 Detect_process() {
   local process_name="$1"
   local pids=""
-  if command -v ps >/dev/null 2>&1; then
-    pids=$(ps -eo pid,comm | awk -v name="$process_name" '$2 == name {print $1}')
-  elif command -v pidof >/dev/null 2>&1; then
+  if command -v pidof >/dev/null 2>&1; then
     pids=$(pidof "$process_name" 2>/dev/null)
+  elif command -v ps >/dev/null 2>&1; then
+    pids=$(ps -eo pid,comm | awk -v name="$process_name" '$2 == name {print $1}')
   elif command -v pgrep >/dev/null 2>&1; then
     pids=$(pgrep -f "$process_name" 2>/dev/null)
   fi
