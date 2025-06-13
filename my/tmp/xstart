@@ -262,20 +262,49 @@ run_npm() {
   esac
 }
 
+detect_process() {
+  local process_name="$1"
+  local method="${2:-ps}"
+  local pids=""
+
+  case "$method" in
+    pidof)
+      if command -v pidof >/dev/null 2>&1; then
+        pids=$(pidof "$process_name" 2>/dev/null)
+      fi
+      ;;
+    pgrep)
+      if command -v pgrep >/dev/null 2>&1; then
+        pids=$(pgrep -f "$process_name" 2>/dev/null)
+      fi
+      ;;
+    ps)
+      if command -v ps >/dev/null 2>&1; then
+        # comm only Process name within 15 characters
+        pids=$(ps -eo pid,comm | awk -v name="$process_name" '$2 == name {print $1}')
+      fi
+      ;;
+    *)
+      echo "Invalid method: $method" >&2; return 1 ;;
+  esac
+
+  [ -n "$pids" ] && echo "$pids"
+}
+
 keep_alive() {
   while true; do
-    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ -z "$(pidof "${argo_randomness}")" ]; then
+    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ -z "$(detect_process "${argo_randomness}" "$checkapp")" ]; then
       run_argo
       sleep 5
       check_hostname_change
       # build_urls
     fi
     sleep 5
-    if [ -e "${FILE_PATH}/${web_randomness}" ] && [ -z "$(pidof "${web_randomness}")" ]; then
+    if [ -e "${FILE_PATH}/${web_randomness}" ] && [ -z "$(detect_process "${web_randomness}" "$checkapp")" ]; then
       run_web
     fi
     sleep 5
-    if [ -e "${FILE_PATH}/${npm_randomness}" ] && [ -n "${NEZHA_SERVER}" ] && [ -n "${NEZHA_KEY}" ] && [ -z "$(pidof "${npm_randomness}")" ]; then
+    if [ -e "${FILE_PATH}/${npm_randomness}" ] && [ -n "${NEZHA_SERVER}" ] && [ -n "${NEZHA_KEY}" ] && [ -z "$(detect_process "${npm_randomness}" "$checkapp")" ]; then
       run_npm
     fi
     sleep 50
