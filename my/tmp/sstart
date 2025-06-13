@@ -459,20 +459,48 @@ run_npm() {
   esac
 }
 
+detect_process() {
+  local process_name="$1"
+  local method="${2:-ps}"
+  local pids=""
+
+  case "$method" in
+    pidof)
+      if command -v pidof >/dev/null 2>&1; then
+        pids=$(pidof "$process_name" 2>/dev/null)
+      fi
+      ;;
+    pgrep)
+      if command -v pgrep >/dev/null 2>&1; then
+        pids=$(pgrep -f "$process_name" 2>/dev/null)
+      fi
+      ;;
+    ps)
+      if command -v ps >/dev/null 2>&1; then
+        pids=$(ps -eo pid,comm | awk -v name="$process_name" '$2 == name {print $1}')
+      fi
+      ;;
+    *)
+      echo "Invalid method: $method" >&2; return 1 ;;
+  esac
+
+  [ -n "$pids" ] && echo "$pids"
+}
+
 keep_alive() {
   while true; do
-    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ -z "$(pidof "${argo_randomness}")" ]; then
+    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ -z "$(detect_process "${argo_randomness}" "$checkapp")" ]; then
       run_argo
       sleep 5
       check_hostname_change
       # build_urls
     fi
     sleep 5
-    if [ -e "${FILE_PATH}/${web_randomness}" ] && [ -z "$(pidof "${web_randomness}")" ]; then
+    if [ -e "${FILE_PATH}/${web_randomness}" ] && [ -z "$(detect_process "${web_randomness}" "$checkapp")" ]; then
       run_web
     fi
     sleep 5
-    if [ -e "${FILE_PATH}/${npm_randomness}" ] && [ -n "${NEZHA_SERVER}" ] && [ -n "${NEZHA_KEY}" ] && [ -z "$(pidof "${npm_randomness}")" ]; then
+    if [ -e "${FILE_PATH}/${npm_randomness}" ] && [ -n "${NEZHA_SERVER}" ] && [ -n "${NEZHA_KEY}" ] && [ -z "$(detect_process "${npm_randomness}" "$checkapp")" ]; then
       run_npm
     fi
     sleep 50
@@ -539,7 +567,6 @@ run_processes() {
 get_ip_country_code() {
   if [ -z "$SERVER_IP" ]; then
     SERVER_IP=$(curl -s https://speed.cloudflare.com/meta | tr ',' '\n' | grep -E '"clientIp"\s*:\s*"' | sed 's/.*"clientIp"\s*:\s*"\([^"]*\)".*/\1/')
-    # SERVER_IP=$(curl -s https://ipinfo.io/ip)
   fi
 
   if [[ ! "$SERVER_IP" =~ : ]]; then
@@ -550,8 +577,7 @@ get_ip_country_code() {
     purple "服务器ipv6地址是: $SERVER_IP"
   fi
 
-  export ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26"-"$18}' | sed -e 's/ /_/g')   # 显示ISP及国家简称
-  # export ISP=$(curl -s https://speed.cloudflare.com/meta | tr ',' '\n' | grep -E '"country"\s*:\s*"' | sed 's/.*"country"\s*:\s*"\([^"]*\)".*/\1/')   # 只显示国家简称
+  export ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26"-"$18}' | sed -e 's/ /_/g')
   purple "服务器所在地区: ${ISP}"
 }
 
@@ -597,7 +623,6 @@ general_upload_data() {
 check_hostname_change() {
   if [ -s "${FILE_PATH}/boot.log" ]; then
     export ARGO_DOMAIN=$(cat ${FILE_PATH}/boot.log | grep -o "info.*https://.*trycloudflare.com" | sed "s@.*https://@@g" | tail -n 1)
-    # export ARGO_DOMAIN=$(cat ${FILE_PATH}/boot.log | grep -o "https://.*trycloudflare.com" | tail -n 1 | sed 's/https:\/\///')
   fi
   general_upload_data
 }
@@ -635,6 +660,7 @@ upload_subscription() {
 
 # install_singbox
 install_singbox() {
+  pkill sleep
   pkill tmp
   createfolder
   cleanup_files
