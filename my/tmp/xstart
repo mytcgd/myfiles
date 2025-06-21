@@ -267,11 +267,10 @@ Detect_process() {
   if command -v pidof >/dev/null 2>&1; then
     pids=$(pidof "$process_name" 2>/dev/null)
   elif command -v ps >/dev/null 2>&1; then
-    pids=$(ps -eo pid,comm | awk -v name="$process_name" '$2 == name {print $1}')
+    pids=$(pgrep -x "$process_name" 2>/dev/null)
   elif command -v pgrep >/dev/null 2>&1; then
-    pids=$(pgrep -f "$process_name" 2>/dev/null)
+    pids=$(ps -eo pid,comm | awk -v name="$process_name" '$2 == name {print $1}')
   fi
-
   [ -n "$pids" ] && echo "$pids"
 }
 
