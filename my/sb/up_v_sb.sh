@@ -53,6 +53,8 @@ if source /root/.env; then
     if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
       upload_subscription
       export previousargoDomain="$ARGO_DOMAIN"
+    else
+      echo "临时域名未变动，不上传！"
     fi
     sleep 100
   done
