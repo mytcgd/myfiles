@@ -1,21 +1,16 @@
 #!/bin/bash
 
 if source /root/.env; then
-  upload_subscription() {
-    if command -v curl &> /dev/null; then
-      response=$(curl -s -X POST -H "Content-Type: application/json" -d "{\"URL_NAME\":\"$SUB_NAME\",\"URL\":\"$UPLOAD_DATA\"}" $SUB_URL)
-    elif command -v wget &> /dev/null; then
-      response=$(wget -qO- --post-data="{\"URL_NAME\":\"$SUB_NAME\",\"URL\":\"$UPLOAD_DATA\"}" --header="Content-Type: application/json" $SUB_URL)
-    fi
-  }
-
   export previousargoDomain=""
   while true; do
-    if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
-      upload_subscription
-      export previousargoDomain="$ARGO_DOMAIN"
-    fi
-    sleep 100
+    upload_subscription() {
+      if command -v curl &> /dev/null; then
+        response=$(curl -s -X POST -H "Content-Type: application/json" -d "{\"URL_NAME\":\"$SUB_NAME\",\"URL\":\"$UPLOAD_DATA\"}" $SUB_URL)
+      elif command -v wget &> /dev/null; then
+        response=$(wget -qO- --post-data="{\"URL_NAME\":\"$SUB_NAME\",\"URL\":\"$UPLOAD_DATA\"}" --header="Content-Type: application/json" $SUB_URL)
+      fi
+    }
+
     if [ -s "${FILE_PATH}/argo.log" ]; then
       export ARGO_DOMAIN=$(cat ${FILE_PATH}/argo.log | grep -o "info.*https://.*trycloudflare.com" | sed "s@.*https://@@g" | tail -n 1)
       sleep 2
@@ -41,5 +36,10 @@ if source /root/.env; then
       reality_url="vless://${UUID}@${MYIP}:${REAL_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${PublicKey}&type=tcp&headerType=none#${ISP}-${SUB_NAME}-realtcp"
       UPLOAD_DATA="$UPLOAD_DATA\n$reality_url"
     fi
+    if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
+      upload_subscription
+      export previousargoDomain="$ARGO_DOMAIN"
+    fi
+    sleep 100
   done
 fi
