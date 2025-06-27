@@ -36,6 +36,7 @@ if source /root/.env; then
       reality_url="vless://${UUID}@${MYIP}:${REAL_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${PublicKey}&type=tcp&headerType=none#${ISP}-${SUB_NAME}-realtcp"
       UPLOAD_DATA="$UPLOAD_DATA\n$reality_url"
     fi
+
     if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
       upload_subscription
       export previousargoDomain="$ARGO_DOMAIN"
