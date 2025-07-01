@@ -278,9 +278,6 @@ keep_alive() {
   while true; do
     if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
       run_argo
-      sleep 5
-      check_hostname_change
-      # build_urls
     fi
     sleep 5
     if [ -e "${FILE_PATH}/${web_randomness}" ] && [ -z "$(Detect_process "${web_randomness}")" ]; then
@@ -292,20 +289,6 @@ keep_alive() {
     fi
     sleep 50
   done
-}
-
-upload() {
-  if [ ! -s "${FILE_PATH}/boot.log" ]; then
-    upload_subscription
-  else
-    while true; do
-      upload_subscription
-      sleep 50
-      check_hostname_change
-      # build_urls
-      sleep 50
-    done
-  fi
 }
 
 run_processes() {
@@ -333,21 +316,22 @@ run_processes() {
   fi
 
   check_hostname_change && sleep 1
-  build_urls && sleep 2
   purple "ARGO_DOMAIN: $ARGO_DOMAIN"
+
+  if [ -n "$SUB_URL" ]; then
+    upload >/dev/null 2>&1 &
+  else
+    build_urls
+  fi
 
   purple "\nvps节点链接如下：\n"
   cat ${FILE_PATH}/tmp.txt
 
-  if [ -n "$SUB_URL" ]; then
-    upload >/dev/null 2>&1 &
+  if [ "${openkeepalive}" -eq 1 ]; then
+    keep_alive 2>&1 &
+  elif [ "${openkeepalive}" -eq 0 ]; then
+    rm -rf ${FILE_PATH}/${argo_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/*.json ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.*
   fi
-
-  case "$openkeepalive" in
-    1)
-      keep_alive 2>&1 &
-      ;;
-  esac
 }
 
 # get IP and country
@@ -364,15 +348,15 @@ check_hostname_change() {
   if [ -s "${FILE_PATH}/boot.log" ]; then
     export ARGO_DOMAIN=$(cat ${FILE_PATH}/boot.log | grep -o "info.*https://.*trycloudflare.com" | sed "s@.*https://@@g" | tail -n 1)
   fi
-  export vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2048&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${ISP}-${SUB_NAME}"
+  export vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2560&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${ISP}-${SUB_NAME}"
   export UPLOAD_DATA="$vless_url"
 }
 
 # build_urls
 build_urls() {
-  cat > ${FILE_PATH}/tmp.txt << DEF
-$vless_url
-DEF
+  if [ -n "${UPLOAD_DATA}" ]; then
+    echo -e "${UPLOAD_DATA}" > "${FILE_PATH}/tmp.txt"
+  fi
 }
 
 # upload
@@ -381,6 +365,26 @@ upload_subscription() {
     response=$(curl -s -X POST -H "Content-Type: application/json" -d "{\"URL_NAME\":\"$SUB_NAME\",\"URL\":\"$UPLOAD_DATA\"}" $SUB_URL)
   elif command -v wget &> /dev/null; then
     response=$(wget -qO- --post-data="{\"URL_NAME\":\"$SUB_NAME\",\"URL\":\"$UPLOAD_DATA\"}" --header="Content-Type: application/json" $SUB_URL)
+  fi
+}
+
+export previousargoDomain=""
+upload() {
+  if [ ${openkeepalive} -eq 1 ] && [ ${openserver} -eq 1 ] && [ -z "${ARGO_AUTH}" ]; then
+    while true; do
+      if [[ "$previousargoDomain" == "$ARGO_DOMAIN" ]]; then
+        echo "domain name has not been updated, no need to upload" > /dev/null
+      else
+        upload_subscription
+        build_urls
+        export previousargoDomain="$ARGO_DOMAIN"
+      fi
+      sleep 60
+      check_hostname_change && sleep 2
+    done
+  else
+    upload_subscription
+    build_urls
   fi
 }
 
