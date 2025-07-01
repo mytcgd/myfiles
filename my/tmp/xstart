@@ -315,15 +315,15 @@ run_processes() {
     sleep 1
   fi
 
-  check_hostname_change && sleep 1
+  check_hostname_change && sleep 2
   purple "ARGO_DOMAIN: $ARGO_DOMAIN"
-
   if [ -n "$SUB_URL" ]; then
     upload >/dev/null 2>&1 &
   else
     build_urls
   fi
 
+  sleep 2
   purple "\nvps节点链接如下：\n"
   cat ${FILE_PATH}/tmp.txt
 
@@ -372,9 +372,7 @@ export previousargoDomain=""
 upload() {
   if [ ${openkeepalive} -eq 1 ] && [ ${openserver} -eq 1 ] && [ -z "${ARGO_AUTH}" ]; then
     while true; do
-      if [[ "$previousargoDomain" == "$ARGO_DOMAIN" ]]; then
-        echo "domain name has not been updated, no need to upload" > /dev/null
-      else
+      if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
         upload_subscription
         build_urls
         export previousargoDomain="$ARGO_DOMAIN"
@@ -384,7 +382,6 @@ upload() {
     done
   else
     upload_subscription
-    build_urls
   fi
 }
 
