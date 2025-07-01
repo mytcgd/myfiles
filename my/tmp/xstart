@@ -317,15 +317,13 @@ run_processes() {
 
   check_hostname_change && sleep 2
   purple "ARGO_DOMAIN: $ARGO_DOMAIN"
-  if [ -n "$SUB_URL" ]; then
-    upload >/dev/null 2>&1 &
-  else
-    build_urls
-  fi
-
-  sleep 2
+  build_urls && sleep 1
   purple "\nvps节点链接如下：\n"
   cat ${FILE_PATH}/tmp.txt
+
+  if [ -n "$SUB_URL" ]; then
+    upload >/dev/null 2>&1 &
+  fi
 
   if [ "${openkeepalive}" -eq 1 ]; then
     keep_alive 2>&1 &
