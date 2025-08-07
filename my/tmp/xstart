@@ -330,6 +330,7 @@ run_processes() {
   if [ "${KEEPALIVE}" -eq 1 ]; then
     keep_alive 2>&1 &
   elif [ "${KEEPALIVE}" -eq 0 ]; then
+    sleep 5
     rm -rf ${FILE_PATH}/${argo_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/*.json ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.*
   fi
 }

@@ -515,6 +515,7 @@ run_processes() {
   if [ "${KEEPALIVE}" -eq 1 ]; then
     keep_alive 2>&1 &
   elif [ "${KEEPALIVE}" -eq 0 ]; then
+    sleep 5
     rm -rf ${FILE_PATH}/${server_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/sconf ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.* ${FILE_PATH}/cert.pem ${FILE_PATH}/private.key
   fi
 }
