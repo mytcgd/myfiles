@@ -10,12 +10,12 @@ purple() { echo -e "\e[1;35m$1\033[0m"; }
 export CFPORT=${CFPORT:-'8443'}
 export CF_IP=${CF_IP:-'ip.sb'}
 export FILE_PATH=${FILE_PATH:-'./.tmp'}
-export openkeepalive=${openkeepalive:-'1'}
-export openserver=${openserver:-'1'}
+export KEEPALIVE=${KEEPALIVE:-'1'}
+export OPENSERVER=${OPENSERVER:-'0'}
 export SERVER_IP=${SERVER_IP:-''}
 
 export V_PORT=${V_PORT:-''}
-export VLESS_WSPATH=${VLESS_WSPATH:-'startvl'}
+export VLPATH=${VLPATH:-'startvl'}
 
 export REAL_PORT=${REAL_PORT:-''}
 export SNI=${SNI:-'www.zara.com'}
@@ -106,16 +106,13 @@ initialize_downloads() {
   sleep 3
   chmod +x ${FILE_PATH}/web
 
-  case "$openserver" in
-    "1" )
-      download_program "${FILE_PATH}/argo" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
-      sleep 3
-      chmod +x ${FILE_PATH}/argo
-      ;;
-    "0" )
-      green "本次安装不使用argo隧道!"
-      ;;
-  esac
+  if [ ${OPENSERVER} -eq 1 ] && [ -n "${V_PORT}" ]; then
+    download_program "${FILE_PATH}/argo" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+    sleep 3
+    chmod +x ${FILE_PATH}/argo
+  else
+    green "本次安装不使用argo隧道!"
+  fi
 }
 
 # Generating Configuration Files
@@ -173,7 +170,7 @@ ABC
             ],
             "transport": {
                 "type": "ws",
-                "path": "/${VLESS_WSPATH}",
+                "path": "/${VLPATH}",
                 "early_data_header_name": "Sec-WebSocket-Protocol"
             }
         }
@@ -464,7 +461,7 @@ Detect_process() {
 
 keep_alive() {
   while true; do
-    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ "${openserver}" -eq 1 ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
+    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ ${OPENSERVER} -eq 1 ] && [ -n "${V_PORT}" ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
       run_argo
     fi
     sleep 5
@@ -484,7 +481,7 @@ run_processes() {
   web_randomness=tmp$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 3)
   npm_randomness=tmp$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 3)
 
-  if [ "${openserver}" -eq 1 ] && [ -e "${FILE_PATH}/argo" ]; then
+  if [ ${OPENSERVER} -eq 1 ] && [ -n "${V_PORT}" ] && [ -e "${FILE_PATH}/argo" ]; then
     mv ${FILE_PATH}/argo ${FILE_PATH}/${argo_randomness} && sleep 1
     run_argo
     red "argo is running !"
@@ -515,9 +512,9 @@ run_processes() {
   purple "\nvps节点链接如下：\n"
   cat ${FILE_PATH}/tmp.txt
 
-  if [ "${openkeepalive}" -eq 1 ]; then
+  if [ "${KEEPALIVE}" -eq 1 ]; then
     keep_alive 2>&1 &
-  elif [ "${openkeepalive}" -eq 0 ]; then
+  elif [ "${KEEPALIVE}" -eq 0 ]; then
     rm -rf ${FILE_PATH}/${server_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/sconf ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.* ${FILE_PATH}/cert.pem ${FILE_PATH}/private.key
   fi
 }
@@ -550,7 +547,7 @@ general_upload_data() {
     if [ -n "${MY_DOMAIN}" ] && [ -z "${ARGO_DOMAIN}" ]; then
       export ARGO_DOMAIN="${MY_DOMAIN}"
     fi
-    export vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2560&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${ISP}-${SUB_NAME}"
+    export vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLPATH}%3Fed%3D2560&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${ISP}-${SUB_NAME}"
     UPLOAD_DATA="${vless_url}"
   fi
 
@@ -604,7 +601,7 @@ upload_subscription() {
 
 export previousargoDomain=""
 upload() {
-  if [ ${openkeepalive} -eq 1 ] && [ ${openserver} -eq 1 ] && [ -z "${ARGO_AUTH}" ]; then
+  if [ ${KEEPALIVE} -eq 1 ] && [ ${OPENSERVER} -eq 1 ] && [ -z "${ARGO_AUTH}" ]; then
     while true; do
       if [[ "$previousargoDomain" == "$ARGO_DOMAIN" ]]; then
         echo "domain name has not been updated, no need to upload" > /dev/null

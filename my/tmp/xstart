@@ -10,7 +10,7 @@ purple() { echo -e "\e[1;35m$1\033[0m"; }
 export CFPORT=${CFPORT:-'443'}
 export CF_IP=${CF_IP:-'ip.sb'}
 export FILE_PATH=${FILE_PATH:-'./.tmp'}
-export openkeepalive=${openkeepalive:-'1'}
+export KEEPALIVE=${KEEPALIVE:-'1'}
 export V_PORT=${V_PORT:-'8080'}
 export VLESS_WSPATH=${VLESS_WSPATH:-'startvl'}
 
@@ -327,9 +327,9 @@ run_processes() {
   purple "\nvps节点链接如下：\n"
   cat ${FILE_PATH}/tmp.txt
 
-  if [ "${openkeepalive}" -eq 1 ]; then
+  if [ "${KEEPALIVE}" -eq 1 ]; then
     keep_alive 2>&1 &
-  elif [ "${openkeepalive}" -eq 0 ]; then
+  elif [ "${KEEPALIVE}" -eq 0 ]; then
     rm -rf ${FILE_PATH}/${argo_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/*.json ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.*
   fi
 }
@@ -370,7 +370,7 @@ upload_subscription() {
 
 export previousargoDomain=""
 upload() {
-  if [ ${openkeepalive} -eq 1 ] && [ -z "${ARGO_AUTH}" ]; then
+  if [ ${KEEPALIVE} -eq 1 ] && [ -z "${ARGO_AUTH}" ]; then
     while true; do
       if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
         upload_subscription
