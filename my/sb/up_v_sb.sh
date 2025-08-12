@@ -36,7 +36,7 @@ if source /root/.env; then
     fi
 
     if [ -n "$TUIC_PORT" ]; then
-      tuic_url="tuic://${UUID}:${tuicpass}@${MYIP}:${TUIC_PORT}?sni=www.bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#${ISP}-${SUB_NAME}"
+      tuic_url="tuic://${UUID}:${TUICPASS}@${MYIP}:${TUIC_PORT}?sni=www.bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#${ISP}-${SUB_NAME}"
       UPLOAD_DATA="$UPLOAD_DATA\n$tuic_url"
     fi
 
