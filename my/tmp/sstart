@@ -143,8 +143,8 @@ my_config() {
     "dns": {
         "servers": [
             {
-                "tag": "google",
-                "address": "tls://8.8.8.8"
+                "type": "tls",
+                "server": "8.8.8.8"
             }
         ]
     }
