@@ -146,8 +146,7 @@ my_config() {
     "dns": {
         "servers": [
             {
-                "type": "tls",
-                "server": "8.8.8.8"
+                "type": "local"
             }
         ]
     }
