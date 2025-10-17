@@ -16,6 +16,7 @@ if source /root/.env; then
       sleep 2
     fi
 
+    UPLOAD_DATA=""
     if [ -n "${V_PORT}" ]; then
       if [ -n "$MY_DOMAIN" ] && [ -z "${ARGO_DOMAIN}" ]; then
         export ARGO_DOMAIN="$MY_DOMAIN"
