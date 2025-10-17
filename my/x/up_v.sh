@@ -16,16 +16,15 @@ if source /root/.env; then
       sleep 2
     fi
 
+    UPLOAD_DATA=""
     if [ -n "$V_PORT" ]; then
       if [ -n "$MY_DOMAIN" ] && [ -z "${ARGO_DOMAIN}" ]; then
         export ARGO_DOMAIN="$MY_DOMAIN"
       fi
       if [ -n "${VLESS_WSPATH}" ] && [ -z "${XHTTP_PATH}" ]; then
-        vless_url="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2560&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${ISP}-${SUB_NAME}"
-        UPLOAD_DATA="$vless_url"
+        UPLOAD_DATA="vless://${UUID}@${CF_IP}:${CFPORT}?host=${ARGO_DOMAIN}&path=%2F${VLESS_WSPATH}%3Fed%3D2560&type=ws&encryption=none&security=tls&sni=${ARGO_DOMAIN}#${ISP}-${SUB_NAME}"
       elif [ -n "${XHTTP_PATH}" ] && [ -z "${VLESS_WSPATH}" ]; then
-        xhttp_url="vless://${UUID}@${CF_IP}:${CFPORT}?encryption=none&security=tls&sni=${ARGO_DOMAIN}&type=xhttp&host=${ARGO_DOMAIN}&path=%2F${XHTTP_PATH}%3Fed%3D2560&mode=packet-up#${ISP}-${SUB_NAME}-xhttp"
-        UPLOAD_DATA="$xhttp_url"
+        UPLOAD_DATA="vless://${UUID}@${CF_IP}:${CFPORT}?encryption=none&security=tls&sni=${ARGO_DOMAIN}&type=xhttp&host=${ARGO_DOMAIN}&path=%2F${XHTTP_PATH}%3Fed%3D2560&mode=packet-up#${ISP}-${SUB_NAME}-xhttp"
       fi
     fi
 
