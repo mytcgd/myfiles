@@ -28,6 +28,11 @@ if source /root/.env; then
       fi
     fi
 
+    if [ -n "${ECH_TYPE}" ] && [ -n "${ECH_LISTEN}" ]; then
+      ech_url="ech://server=${ECH_TYPE}&listen=${ECH_LISTEN}&token=${UUID}&dns=dns.alidns.com/dns-query&ech=cloudflare-ech.com&ip=try.cloudflare.com&name=${SUB_NAME}"
+      UPLOAD_DATA="$UPLOAD_DATA\n$ech_url"
+    fi
+
     if [ -n "$REAL_PORT" ] && [ -n "$SHORTID" ]; then
       reality_url="vless://${UUID}@${MYIP}:${REAL_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${PublicKey}&sid=${SHORTID}&type=tcp&headerType=none#${ISP}-${SUB_NAME}-realtcp"
       UPLOAD_DATA="$UPLOAD_DATA\n$reality_url"
