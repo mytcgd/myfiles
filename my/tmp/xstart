@@ -330,21 +330,71 @@ run_processes() {
   purple "\nvps节点链接如下：\n"
   cat ${FILE_PATH}/tmp.txt
 
-  if [ "${KEEPALIVE}" -eq 1 ]; then
+  if [ "${KEEPALIVE}" = "1" ]; then
     keep_alive 2>&1 &
-  elif [ "${KEEPALIVE}" -eq 0 ]; then
+  elif [ "${KEEPALIVE}" = "0" ]; then
     sleep 5
     rm -rf ${FILE_PATH}/${argo_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/*.json ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.*
   fi
 }
 
-# get IP and country
-get_ip_country_code() {
-  export SERVER_IP=$(curl -s https://speed.cloudflare.com/meta | tr ',' '\n' | grep -E '"clientIp"\s*:\s*"' | sed 's/.*"clientIp"\s*:\s*"\([^"]*\)".*/\1/')
-  purple "服务器IP地址: ${SERVER_IP}"
+# 声明一个辅助函数，用于调用 API 并解析结果
+fetch_and_parse() {
+    local url="$1"
+    local json_key="$2" # "ip" for (ip.sb/Worker), "query" for ip-api.com
 
-  export ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26"-"$18}' | sed -e 's/ /_/g')
-  purple "服务器所在地区: ${ISP}"
+    IP_INFO=$(curl -s "$url")
+
+    # 检查是否成功获取到 IP 地址的键
+    if echo "$IP_INFO" | grep -q "\"${json_key}\""; then
+        if [[ "$json_key" == "ip" ]]; then
+            # 针对 ip.sb 和 Worker API
+            ISP_NAME=$(echo "$IP_INFO" | sed -n 's/.*"isp": *"\([^"]*\).*/\1/p' | sed -e 's/[ ,\.]/_/g; s/__*/_/g; s/^_//; s/_$//')
+
+            # 解析 Worker 或 ip.sb 的 'country_code'
+            COUNTRY_CODE=$(echo "$IP_INFO" | sed -n 's/.*"country_code": *"\([^"]*\).*/\1/p')
+        else
+            # 针对 ip-api.com
+            ISP_NAME=$(echo "$IP_INFO" | sed -n 's/.*"isp": *"\([^"]*\).*/\1/p' | sed -e 's/[ ,\.]/_/g; s/__*/_/g; s/^_//; s/_$//')
+            COUNTRY_CODE=$(echo "$IP_INFO" | sed -n 's/.*"countryCode": *"\([^"]*\).*/\1/p')
+        fi
+
+        # 检查是否成功提取了所有关键信息
+        if [[ -n "$ISP_NAME" && -n "$COUNTRY_CODE" ]]; then
+            export ISP="${COUNTRY_CODE}-${ISP_NAME}"
+            return 0 # 成功
+        fi
+    fi
+    return 1 # 失败
+}
+
+# 获取IP及国家代码
+get_ip_country_code() {
+    local API_STATUS=1
+
+    # 1. 尝试 https://api.ip.sb/geoip
+    if fetch_and_parse "https://api.ip.sb/geoip" "ip"; then
+        API_STATUS=0
+
+    # 2. 如果第一个也失败，尝试 http://ip-api.com/json
+    elif fetch_and_parse "http://ip-api.com/json" "query"; then
+        API_STATUS=0
+
+    # 3. 如果第二个失败，尝试您的 Worker URL
+    elif [[ -n "$MYIP_URL" ]] && fetch_and_parse "${MYIP_URL}" "ip"; then
+        API_STATUS=0
+    fi
+
+    # 检查是否从任何 API 成功获取数据
+    if [[ "$API_STATUS" -eq 0 ]]; then
+        purple "本机的ISP: ${ISP}"
+        return 0
+    else
+        # 所有 API 都失败了
+        export ISP="UN"
+        purple "本机的ISP: ${ISP}"
+        return 1
+    fi
 }
 
 # check_hostname
@@ -374,7 +424,7 @@ upload_subscription() {
 
 export previousargoDomain=""
 upload() {
-  if [ ${KEEPALIVE} -eq 1 ] && [ -z "${ARGO_AUTH}" ]; then
+  if [ ${KEEPALIVE} = "1" ] && [ -z "${ARGO_AUTH}" ]; then
     while true; do
       if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
         upload_subscription

@@ -109,7 +109,7 @@ initialize_downloads() {
   sleep 3
   chmod +x ${FILE_PATH}/web
 
-  if [ ${OPENSERVER} -eq 1 ] && [ -n "${V_PORT}" ]; then
+  if [ ${OPENSERVER} = "1" ] && [ -n "${V_PORT}" ]; then
     download_program "${FILE_PATH}/argo" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
     sleep 3
     chmod +x ${FILE_PATH}/argo
@@ -463,7 +463,7 @@ Detect_process() {
 
 keep_alive() {
   while true; do
-    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ ${OPENSERVER} -eq 1 ] && [ -n "${V_PORT}" ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
+    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ ${OPENSERVER} = "1" ] && [ -n "${V_PORT}" ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
       run_argo
     fi
     sleep 5
@@ -483,7 +483,7 @@ run_processes() {
   web_randomness=tmp$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 3)
   npm_randomness=tmp$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 3)
 
-  if [ ${OPENSERVER} -eq 1 ] && [ -n "${V_PORT}" ] && [ -e "${FILE_PATH}/argo" ]; then
+  if [ ${OPENSERVER} = "1" ] && [ -n "${V_PORT}" ] && [ -e "${FILE_PATH}/argo" ]; then
     mv ${FILE_PATH}/argo ${FILE_PATH}/${argo_randomness} && sleep 1
     run_argo
     red "argo is running !"
@@ -514,30 +514,89 @@ run_processes() {
   purple "\nvps节点链接如下：\n"
   cat ${FILE_PATH}/tmp.txt
 
-  if [ "${KEEPALIVE}" -eq 1 ]; then
+  if [ "${KEEPALIVE}" = "1" ]; then
     keep_alive 2>&1 &
-  elif [ "${KEEPALIVE}" -eq 0 ]; then
+  elif [ "${KEEPALIVE}" = "0" ]; then
     sleep 5
     rm -rf ${FILE_PATH}/${server_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/sconf ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.* ${FILE_PATH}/cert.pem ${FILE_PATH}/private.key
   fi
 }
 
-# get IP and country
+# 声明一个辅助函数，用于调用 API 并解析结果
+fetch_and_parse() {
+    local url="$1"
+    local json_key="$2" # "ip" for (ip.sb/Worker), "query" for ip-api.com
+
+    IP_INFO=$(curl -s "$url")
+
+    # 检查是否成功获取到 IP 地址的键
+    if echo "$IP_INFO" | grep -q "\"${json_key}\""; then
+        if [[ "$json_key" == "ip" ]]; then
+            # 针对 ip.sb 和 Worker API
+            if [[ -z "$SERVER_IP" ]]; then
+              SERVER_IP=$(echo "$IP_INFO" | sed -n 's/.*"ip": *"\([^"]*\).*/\1/p')
+            fi
+            ISP_NAME=$(echo "$IP_INFO" | sed -n 's/.*"isp": *"\([^"]*\).*/\1/p' | sed -e 's/[ ,\.]/_/g; s/__*/_/g; s/^_//; s/_$//')
+
+            # 解析 Worker 或 ip.sb 的 'country_code'
+            COUNTRY_CODE=$(echo "$IP_INFO" | sed -n 's/.*"country_code": *"\([^"]*\).*/\1/p')
+        else
+            # 针对 ip-api.com
+            if [[ -z "$SERVER_IP" ]]; then
+              SERVER_IP=$(echo "$IP_INFO" | sed -n 's/.*"query": *"\([^"]*\).*/\1/p')
+            fi
+            ISP_NAME=$(echo "$IP_INFO" | sed -n 's/.*"isp": *"\([^"]*\).*/\1/p' | sed -e 's/[ ,\.]/_/g; s/__*/_/g; s/^_//; s/_$//')
+            COUNTRY_CODE=$(echo "$IP_INFO" | sed -n 's/.*"countryCode": *"\([^"]*\).*/\1/p')
+        fi
+
+        # 检查是否成功提取了所有关键信息
+        if [[ -n "$SERVER_IP" && -n "$ISP_NAME" && -n "$COUNTRY_CODE" ]]; then
+            export SERVER_IP
+            export ISP="${COUNTRY_CODE}-${ISP_NAME}"
+            return 0 # 成功
+        fi
+    fi
+    return 1 # 失败
+}
+
+# 获取IP及国家代码
 get_ip_country_code() {
-  if [ -z "$SERVER_IP" ]; then
-    SERVER_IP=$(curl -s https://speed.cloudflare.com/meta | tr ',' '\n' | grep -E '"clientIp"\s*:\s*"' | sed 's/.*"clientIp"\s*:\s*"\([^"]*\)".*/\1/')
-  fi
+    local API_STATUS=1
 
-  if [[ ! "$SERVER_IP" =~ : ]]; then
-    export MYIP="$SERVER_IP"
-    purple "服务器ipv4地址是: $SERVER_IP"
-  else
-    export MYIP="[$SERVER_IP]"
-    purple "服务器ipv6地址是: $SERVER_IP"
-  fi
+    # 1. 尝试 https://api.ip.sb/geoip
+    if fetch_and_parse "https://api.ip.sb/geoip" "ip"; then
+        API_STATUS=0
 
-  export ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26"-"$18}' | sed -e 's/ /_/g')
-  purple "服务器所在地区: ${ISP}"
+    # 2. 如果第一个也失败，尝试 http://ip-api.com/json
+    elif fetch_and_parse "http://ip-api.com/json" "query"; then
+        API_STATUS=0
+
+    # 3. 如果第二个失败，尝试您的 Worker URL
+    elif [[ -n "$MYIP_URL" ]] && fetch_and_parse "${MYIP_URL}" "ip"; then
+        API_STATUS=0
+    fi
+
+    # 检查是否从任何 API 成功获取数据
+    if [[ "$API_STATUS" -eq 0 ]]; then
+        # 处理 IPv4 或 IPv6 格式
+        if [[ ! "$SERVER_IP" =~ : ]]; then
+            export MYIP="$SERVER_IP"
+            purple "本机的ipv4地址是: $SERVER_IP"
+        else
+            # 对于 IPv6 地址，使用方括号包裹
+            export MYIP="[$SERVER_IP]"
+            purple "本机的ipv6地址是: $SERVER_IP"
+        fi
+        purple "本机的ISP: ${ISP}"
+        return 0
+    else
+        # 所有 API 都失败了
+        export MYIP="1.1.1.1"
+        export ISP="UN"
+        purple "本机的ip地址是: $MYIP"
+        purple "本机的ISP: ${ISP}"
+        return 1
+    fi
 }
 
 # general_upload_data
@@ -603,7 +662,7 @@ upload_subscription() {
 
 export previousargoDomain=""
 upload() {
-  if [ ${KEEPALIVE} -eq 1 ] && [ ${OPENSERVER} -eq 1 ] && [ -z "${ARGO_AUTH}" ]; then
+  if [ ${KEEPALIVE} = "1" ] && [ ${OPENSERVER} = "1" ] && [ -z "${ARGO_AUTH}" ]; then
     while true; do
       if [[ "$previousargoDomain" == "$ARGO_DOMAIN" ]]; then
         echo "domain name has not been updated, no need to upload" > /dev/null
