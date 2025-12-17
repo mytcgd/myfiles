@@ -28,7 +28,7 @@ if source /root/.env; then
       fi
     fi
 
-    if [ -n "${ECH_TYPE}" ] && [ -n "${ECH_LISTEN}" ]; then
+    if [ -n "${ECH_SERVER}" ] && [ -n "${ECH_LISTEN}" ]; then
       ech_url="ech://server=${ECH_SERVER}&listen=${ECH_LISTEN}&token=${UUID}&dns=${ECH_DNS}&ech=${ECH_URL}&ip=${CF_IP}&name=${SUB_NAME}"
       UPLOAD_DATA="$UPLOAD_DATA\n$ech_url"
     fi
