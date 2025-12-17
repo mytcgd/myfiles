@@ -29,7 +29,7 @@ if source /root/.env; then
     fi
 
     if [ -n "${ECH_TYPE}" ] && [ -n "${ECH_LISTEN}" ]; then
-      ech_url="ech://server=${ECH_TYPE}&listen=${ECH_LISTEN}&token=${UUID}&dns=dns.alidns.com/dns-query&ech=cloudflare-ech.com&ip=try.cloudflare.com&name=${SUB_NAME}"
+      ech_url="ech://server=${ECH_SERVER}&listen=${ECH_LISTEN}&token=${UUID}&dns=${ECH_DNS}&ech=${ECH_URL}&ip=${CF_IP}&name=${SUB_NAME}"
       UPLOAD_DATA="$UPLOAD_DATA\n$ech_url"
     fi
 
