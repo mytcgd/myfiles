@@ -436,6 +436,7 @@ upload() {
     done
   else
     upload_subscription
+    build_urls
   fi
 }
 
