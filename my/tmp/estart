@@ -1,0 +1,441 @@
+#!/bin/bash
+
+red="\033[1;91m"
+green="\e[1;32m"
+yellow="\e[1;33m"
+purple="\e[1;35m"
+red() { echo -e "\e[1;91m$1\033[0m"; }
+green() { echo -e "\e[1;32m$1\033[0m"; }
+yellow() { echo -e "\e[1;33m$1\033[0m"; }
+purple() { echo -e "\e[1;35m$1\033[0m"; }
+# reading() { read -p "$(red "$1")" "$2"; }
+
+export FILE_PATH=${FILE_PATH:-'./.tmp'}
+export KEEPALIVE=${KEEPALIVE:-'1'}
+export OPENSERVER=${OPENSERVER:-'1'}
+
+export CF_IP=${CF_IP:-'ip.sb'}
+export ECH_PORT=${ECH_PORT:-'8080'}
+export ECH_PROTOCOL=${ECH_PROTOCOL:-'ws'}
+export ECH_LISTEN=${ECH_LISTEN:-'proxy://127.0.0.1:10808'}
+export ECH_DNS=${ECH_DNS:-'dns.alidns.com/dns-query'}
+export ECH_URL=${ECH_URL:-'cloudflare-ech.com'}
+export SUB_URL=${SUB_URL:-'https://myjyup.shiguangda.nom.za/upload-a4aa34be-4373-4fdb-bff7-0a9c23405dac'}
+export SUB_NAME=${SUB_NAME:-''}
+export MYIP_URL=${MYIP_URL:-''}
+export MY_DOMAIN=${MY_DOMAIN:-''}
+
+export UUID=${UUID:-'7160b696-dd5e-42e3-a024-145e92cec916'}
+export NEZHA_VERSION=${NEZHA_VERSION:-'V1'}
+export NEZHA_SERVER=${NEZHA_SERVER:-''}
+export NEZHA_KEY=${NEZHA_KEY:-''}
+export NEZHA_PORT=${NEZHA_PORT:-'443'}
+
+export ARGO_DOMAIN=${ARGO_DOMAIN:-''}
+export ARGO_AUTH=${ARGO_AUTH:-''}
+
+# 建立运行目录
+createfolder() {
+  if [ ! -d "$FILE_PATH" ]; then
+    mkdir -p "${FILE_PATH}"
+  fi
+}
+
+# 清理历史文件
+cleanup_files() {
+  rm -rf ${FILE_PATH}/*
+}
+
+# 设置下载
+download_program() {
+  local program_name="$1"
+  local default_url="$2"
+  local x64_url="$3"
+
+  local download_url
+  case "$(uname -m)" in
+    x86_64|amd64|x64)
+      download_url="${x64_url}"
+      ;;
+    *)
+      download_url="${default_url}"
+      ;;
+  esac
+
+  if [ ! -f "${program_name}" ]; then
+    if [ -n "${download_url}" ]; then
+      echo "Downloading ${program_name}..." > /dev/null
+      if command -v curl &> /dev/null; then
+        curl -sSL "${download_url}" -o "${program_name}"
+      elif command -v wget &> /dev/null; then
+        wget -qO "${program_name}" "${download_url}"
+      fi
+      echo "Downloaded ${program_name}" > /dev/null
+    else
+      echo "Skipping download for ${program_name}" > /dev/null
+    fi
+  else
+    echo "${program_name} already exists, skipping download" > /dev/null
+  fi
+}
+
+initialize_downloads() {
+  if [ -n "${NEZHA_SERVER}" ] && [ -n "${NEZHA_KEY}" ]; then
+    case "${NEZHA_VERSION}" in
+      "V0" )
+        download_program "${FILE_PATH}/npm" "https://github.com/kahunama/myfile/releases/download/main/nezha-agent_arm" "https://github.com/kahunama/myfile/releases/download/main/nezha-agent"
+        ;;
+      "V1" )
+        download_program "${FILE_PATH}/npm" "https://github.com/mytcgd/myfiles/releases/download/main/nezha-agentv1_arm" "https://github.com/mytcgd/myfiles/releases/download/main/nezha-agentv1"
+        ;;
+    esac
+    sleep 3
+    chmod +x ${FILE_PATH}/npm
+  fi
+
+  if [ -n "${ECH_PROTOCOL}" ] && [ -n "${ECH_PORT}" ]; then
+    download_program "${FILE_PATH}/ech" "https://github.com/kahunama/myfile/releases/download/main/ech-tunnel-linux-arm64" "https://github.com/kahunama/myfile/releases/download/main/ech-tunnel-linux-amd64"
+    sleep 3
+    chmod +x ${FILE_PATH}/ech
+  fi
+
+  download_program "${FILE_PATH}/argo" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+  sleep 3
+  chmod +x ${FILE_PATH}/argo
+}
+
+# my_config
+my_config() {
+  argo_type() {
+    if [ -e "${FILE_PATH}/argo" ] && [ -z "${ARGO_AUTH}" ] && [ -z "${ARGO_DOMAIN}" ]; then
+      echo "ARGO_AUTH or ARGO_DOMAIN is empty, use Quick Tunnels" > /dev/null
+      return
+    fi
+
+    if [ -e "${FILE_PATH}/argo" ] && [ -n "$(echo "${ARGO_AUTH}" | grep TunnelSecret)" ]; then
+      echo ${ARGO_AUTH} > ${FILE_PATH}/tunnel.json
+      cat > ${FILE_PATH}/tunnel.yml << EOF
+tunnel=$(echo "${ARGO_AUTH}" | cut -d\" -f12)
+credentials-file: ${FILE_PATH}/tunnel.json
+protocol: http2
+
+ingress:
+  - hostname: ${ARGO_DOMAIN}
+    service: http://localhost: ${ECH_PORT}
+    originRequest:
+      noTLSVerify: true
+  - service: http_status:404
+EOF
+    else
+      echo "ARGO_AUTH Mismatch TunnelSecret" > /dev/null
+    fi
+  }
+
+  args() {
+    if [ -e "${FILE_PATH}/argo" ]; then
+      if [ -n "$(echo "${ARGO_AUTH}" | grep '^[A-Z0-9a-z=]\{120,250\}$')" ]; then
+        args="tunnel --edge-ip-version auto --no-autoupdate --protocol http2 run --token ${ARGO_AUTH}"
+      elif [ -n "$(echo "${ARGO_AUTH}" | grep TunnelSecret)" ]; then
+        args="tunnel --edge-ip-version auto --config ${FILE_PATH}/tunnel.yml run"
+      else
+        args="tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${ECH_PORT}"
+      fi
+    fi
+  }
+
+  if [ -n "${NEZHA_SERVER}" ] && [ -n "${NEZHA_KEY}" ]; then
+    nezhacfg() {
+      tlsPorts=("443" "8443" "2096" "2087" "2083" "2053")
+      case "${NEZHA_VERSION}" in
+        "V0" )
+          if [[ " ${tlsPorts[@]} " =~ " ${NEZHA_PORT} " ]]; then
+            NEZHA_TLS="--tls"
+          else
+            NEZHA_TLS=""
+          fi
+          ;;
+        "V1" )
+          if [[ " ${tlsPorts[@]} " =~ " ${NEZHA_PORT} " ]]; then
+            NEZHA_TLS="true"
+          else
+            NEZHA_TLS="false"
+          fi
+          cat > ${FILE_PATH}/config.yml << ABC
+client_secret: $NEZHA_KEY
+debug: false
+disable_auto_update: true
+disable_command_execute: false
+disable_force_update: true
+disable_nat: false
+disable_send_query: false
+gpu: false
+insecure_tls: false
+ip_report_period: 1800
+report_delay: 4
+server: $NEZHA_SERVER:$NEZHA_PORT
+skip_connection_count: false
+skip_procs_count: false
+temperature: false
+tls: $NEZHA_TLS
+use_gitee_to_upgrade: false
+use_ipv6_country_code: false
+uuid: $UUID
+ABC
+          ;;
+      esac
+    }
+    nezhacfg
+  fi
+
+  argo_type
+  args
+}
+
+# run
+run_argo() {
+  ${FILE_PATH}/${argo_randomness} ${args} >/dev/null 2>&1 &
+}
+
+run_web() {
+  ${FILE_PATH}/${ech_randomness} -l "${ECH_PROTOCOL}://0.0.0.0:${ECH_PORT}" -token "${UUID}" >/dev/null 2>&1 &
+}
+
+run_npm() {
+  case "${NEZHA_VERSION}" in
+    "V0" )
+      ${FILE_PATH}/${npm_randomness} -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} ${NEZHA_TLS} --report-delay=4 --skip-conn --skip-procs --disable-auto-update >/dev/null 2>&1 &
+      ;;
+    "V1" )
+      ${FILE_PATH}/${npm_randomness} -c ${FILE_PATH}/config.yml >/dev/null 2>&1 &
+      ;;
+  esac
+}
+
+Detect_process() {
+  local process_name="$1"
+  local pids=""
+  if command -v pidof >/dev/null 2>&1; then
+    pids=$(pidof "$process_name" 2>/dev/null)
+  elif command -v ps >/dev/null 2>&1; then
+    pids=$(pgrep -x "$process_name" 2>/dev/null)
+  elif command -v pgrep >/dev/null 2>&1; then
+    pids=$(ps -eo pid,comm | awk -v name="$process_name" '$2 == name {print $1}')
+  fi
+  [ -n "$pids" ] && echo "$pids"
+}
+
+keep_alive() {
+  while true; do
+    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
+      run_argo
+    fi
+    sleep 5
+    if [ -e "${FILE_PATH}/${ech_randomness}" ] && [ -n "${ECH_PROTOCOL}" ] && [ -n "${ECH_PORT}" ] && [ -z "$(Detect_process "${ech_randomness}")" ]; then
+      run_ech
+    fi
+    sleep 5
+    if [ -e "${FILE_PATH}/${npm_randomness}" ] && [ -n "${NEZHA_SERVER}" ] && [ -n "${NEZHA_KEY}" ] && [ -z "$(Detect_process "${npm_randomness}")" ]; then
+      run_npm
+    fi
+    sleep 50
+  done
+}
+
+run_processes() {
+  argo_randomness=tmp$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 3)
+  ech_randomness=tmp$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 3)
+  npm_randomness=tmp$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 3)
+
+  if [ -e "${FILE_PATH}/argo" ]; then
+    mv ${FILE_PATH}/argo ${FILE_PATH}/${argo_randomness} && sleep 1
+    run_argo
+    red "argo is running !"
+    sleep 5
+  fi
+  if [ -n "${ECH_PROTOCOL}" ] && [ -n "${ECH_PORT}" ] && [ -e "${FILE_PATH}/ech" ]; then
+    mv ${FILE_PATH}/ech ${FILE_PATH}/${ech_randomness} && sleep 1
+    run_ech
+    red "ech is running !"
+    sleep 1
+  fi
+  if [ -n "${NEZHA_SERVER}" ] && [ -n "${NEZHA_KEY}" ] && [ -e "${FILE_PATH}/npm" ]; then
+    mv ${FILE_PATH}/npm ${FILE_PATH}/${npm_randomness} && sleep 1
+    run_npm
+    red "npm is running !"
+    sleep 1
+  fi
+
+  check_hostname_change && sleep 2
+  purple "ARGO_DOMAIN: $ARGO_DOMAIN"
+  if [ -n "$SUB_URL" ]; then
+    upload >/dev/null 2>&1 &
+  else
+    build_urls
+  fi
+
+  sleep 3
+  purple "\nvps节点链接如下：\n"
+  cat ${FILE_PATH}/tmp.txt
+
+  if [ "${KEEPALIVE}" = "1" ]; then
+    keep_alive 2>&1 &
+  elif [ "${KEEPALIVE}" = "0" ]; then
+    sleep 5
+    rm -rf ${FILE_PATH}/${argo_randomness} ${FILE_PATH}/${ech_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/*.json ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.*
+  fi
+}
+
+# 声明一个辅助函数，用于调用 API 并解析结果
+fetch_and_parse() {
+    local url="$1"
+    local json_key="$2" # "ip" for (ip.sb/Worker), "query" for ip-api.com
+
+    IP_INFO=$(curl -s "$url")
+
+    # 检查是否成功获取到 IP 地址的键
+    if echo "$IP_INFO" | grep -q "\"${json_key}\""; then
+        if [[ "$json_key" == "ip" ]]; then
+            # 针对 ip.sb 和 Worker API
+            ISP_NAME=$(echo "$IP_INFO" | sed -n 's/.*"isp": *"\([^"]*\).*/\1/p' | sed -e 's/[ ,\.]/_/g; s/__*/_/g; s/^_//; s/_$//')
+
+            # 解析 Worker 或 ip.sb 的 'country_code'
+            COUNTRY_CODE=$(echo "$IP_INFO" | sed -n 's/.*"country_code": *"\([^"]*\).*/\1/p')
+        else
+            # 针对 ip-api.com
+            ISP_NAME=$(echo "$IP_INFO" | sed -n 's/.*"isp": *"\([^"]*\).*/\1/p' | sed -e 's/[ ,\.]/_/g; s/__*/_/g; s/^_//; s/_$//')
+            COUNTRY_CODE=$(echo "$IP_INFO" | sed -n 's/.*"countryCode": *"\([^"]*\).*/\1/p')
+        fi
+
+        # 检查是否成功提取了所有关键信息
+        if [[ -n "$ISP_NAME" && -n "$COUNTRY_CODE" ]]; then
+            export ISP="${COUNTRY_CODE}-${ISP_NAME}"
+            return 0 # 成功
+        fi
+    fi
+    return 1 # 失败
+}
+
+# 获取IP及国家代码
+get_ip_country_code() {
+    local API_STATUS=1
+
+    # 1. 尝试 https://api.ip.sb/geoip
+    if fetch_and_parse "https://api.ip.sb/geoip" "ip"; then
+        API_STATUS=0
+
+    # 2. 如果第一个也失败，尝试 http://ip-api.com/json
+    elif fetch_and_parse "http://ip-api.com/json" "query"; then
+        API_STATUS=0
+
+    # 3. 如果第二个失败，尝试您的 Worker URL
+    elif [[ -n "$MYIP_URL" ]] && fetch_and_parse "${MYIP_URL}" "ip"; then
+        API_STATUS=0
+    fi
+
+    # 检查是否从任何 API 成功获取数据
+    if [[ "$API_STATUS" -eq 0 ]]; then
+        purple "本机的ISP: ${ISP}"
+        return 0
+    else
+        # 所有 API 都失败了
+        export ISP="UN"
+        purple "本机的ISP: ${ISP}"
+        return 1
+    fi
+}
+
+# check_hostname
+check_hostname_change() {
+  if [ -s "${FILE_PATH}/boot.log" ]; then
+    export ARGO_DOMAIN=$(cat ${FILE_PATH}/boot.log | grep -o "info.*https://.*trycloudflare.com" | sed "s@.*https://@@g" | tail -n 1)
+  fi
+  if [ "${OPENSERVER}" = "0" ] && [ -n "${MY_DOMAIN}" ]; then
+    export ARGO_DOMAIN="${MY_DOMAIN}"
+  fi
+  export ECH_SERVER="wss://${ARGO_DOMAIN}:8443/tunnel"
+  if [ -n "${ECH_PROTOCOL}" ] && [ -n "${ECH_PORT}" ]; then
+    UPLOAD_DATA="ech://server=${ECH_SERVER}&listen=${ECH_LISTEN}&token=${UUID}&dns=${ECH_DNS}&ech=${ECH_URL}&ip=${CF_IP}&name=${SUB_NAME}"
+  fi
+  export UPLOAD_DATA
+}
+
+# build_urls
+build_urls() {
+  if [ -n "${UPLOAD_DATA}" ]; then
+    echo -e "${UPLOAD_DATA}" > "${FILE_PATH}/tmp.txt"
+  fi
+}
+
+# upload
+upload_subscription() {
+  if command -v curl &> /dev/null; then
+    response=$(curl -s -X POST -H "Content-Type: application/json" -d "{\"URL_NAME\":\"$SUB_NAME\",\"URL\":\"$UPLOAD_DATA\"}" $SUB_URL)
+  elif command -v wget &> /dev/null; then
+    response=$(wget -qO- --post-data="{\"URL_NAME\":\"$SUB_NAME\",\"URL\":\"$UPLOAD_DATA\"}" --header="Content-Type: application/json" $SUB_URL)
+  fi
+}
+
+export previousargoDomain=""
+upload() {
+  if [ ${KEEPALIVE} = "1" ] && [ -z "${ARGO_AUTH}" ]; then
+    while true; do
+      if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
+        upload_subscription
+        build_urls
+        export previousargoDomain="$ARGO_DOMAIN"
+      fi
+      sleep 60
+      check_hostname_change && sleep 2
+    done
+  else
+    upload_subscription
+  fi
+}
+
+# install_ech
+install_ech() {
+  pkill sleep
+  pkill tmp
+  createfolder
+  cleanup_files
+  initialize_downloads
+  get_ip_country_code
+  my_config
+  run_processes
+}
+
+# remove_ech
+remove_ech() {
+  pkill sleep
+  pkill tmp
+  rm -rf ${FILE_PATH}
+  pkill bash
+}
+
+menu(){
+yellow "1、安装ech_argo临时节点"
+yellow " "
+yellow "2、御载ech_argo临时节点"
+yellow " "
+yellow "0、退出脚本"
+yellow " "
+read -p " 请输入数字 [0-2]: " num
+case "$num" in
+    1)
+    install_ech
+    ;;
+    2)
+    remove_ech
+    ;;
+    0)
+    exit 1
+    ;;
+    *)
+    clear
+    echo -e "${Error}:请输入正确数字 [1-2]"
+    sleep 5s
+    menu
+    ;;
+esac
+}
+menu
