@@ -346,17 +346,18 @@ get_ip_country_code() {
 
 # check_hostname
 check_hostname_change() {
+  UPLOAD_DATA=""
   if [ -s "${FILE_PATH}/boot.log" ]; then
     export ARGO_DOMAIN=$(cat ${FILE_PATH}/boot.log | grep -o "info.*https://.*trycloudflare.com" | sed "s@.*https://@@g" | tail -n 1)
+    sleep 5
   fi
   if [ "${OPENSERVER}" = "0" ] && [ -n "${MY_DOMAIN}" ]; then
     export ARGO_DOMAIN="${MY_DOMAIN}"
   fi
   export ECH_SERVER="wss://${ARGO_DOMAIN}:8443/tunnel"
   if [ -n "${ECH_PROTOCOL}" ] && [ -n "${ECH_PORT}" ]; then
-    UPLOAD_DATA="ech://server=${ECH_SERVER}&listen=${ECH_LISTEN}&token=${UUID}&dns=${ECH_DNS}&ech=${ECH_URL}&ip=${CF_IP}&name=${SUB_NAME}"
+    export UPLOAD_DATA="ech://server=${ECH_SERVER}&listen=${ECH_LISTEN}&token=${UUID}&dns=${ECH_DNS}&ech=${ECH_URL}&ip=${CF_IP}&name=${SUB_NAME}"
   fi
-  export UPLOAD_DATA
 }
 
 # build_urls
@@ -389,6 +390,7 @@ upload() {
     done
   else
     upload_subscription
+    build_urls
   fi
 }
 
