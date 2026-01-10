@@ -197,7 +197,7 @@ run_argo() {
 }
 
 run_ech() {
-  ${FILE_PATH}/${ech_randomness} -l "${ECH_PROTOCOL}://0.0.0.0:${ECH_PORT}" -token "${UUID}" >/dev/null 2>&1 &
+  ${FILE_PATH}/${ech_randomness} -l "${ECH_PROTOCOL}://127.0.0.1:${ECH_PORT}" -token "${UUID}" >/dev/null 2>&1 &
 }
 
 run_npm() {
