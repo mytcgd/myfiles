@@ -16,7 +16,7 @@ if source /root/.env; then
       sleep 2
     fi
 
-    ECH_SERVER="wss://${ARGO_DOMAIN}:8443/tunnel"
+    ECH_SERVER="wss://${ARGO_DOMAIN}:443/tunnel"
     UPLOAD_DATA="ech://server=${ECH_SERVER}&listen=${ECH_LISTEN}&token=${UUID}&dns=${ECH_DNS}&ech=${ECH_URL}&ip=${CF_IP}&name=${SUB_NAME}"
 
     if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
