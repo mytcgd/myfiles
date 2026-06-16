@@ -7,7 +7,7 @@ if source /root/.env; then
       if command -v curl &> /dev/null; then
         response=$(curl -s -X POST -H "Content-Type: application/json" -d "{\"URL_NAME\":\"$SUB_NAME\",\"URL\":\"$UPLOAD_DATA\"}" $SUB_URL)
       elif command -v wget &> /dev/null; then
-        response=$(wget -qO- --post-data="{\"URL_NAME\":\"$SUB_NAME\",\"URLp\":\"$UPLOAD_DATA\"}" --header="Content-Type: application/json" $SUB_URL)
+        response=$(wget -qO- --post-data="{\"URL_NAME\":\"$SUB_NAME\",\"URL\":\"$UPLOAD_DATA\"}" --header="Content-Type: application/json" $SUB_URL)
       fi
     }
 
@@ -17,7 +17,7 @@ if source /root/.env; then
     fi
 
     ECH_SERVER="wss://${ARGO_DOMAIN}:443/tunnel"
-    UPLOAD_DATA="node://server=${ECH_SERVER}&listen=${ECH_LISTEN}&token=${UUID}&dns=${ECH_DNS}&ech=${ECH_URL}&ip=${CF_IP}&executable=ech-tunnel&name=${SUB_NAME}"
+    UPLOAD_DATA="node://server=${ECH_SERVER}&listen=${ECH_LISTEN}&token=${UUID}&dns=${ECH_DNS}&ech=${ECH_URL}&ip=${CF_IP}&connections=3&executable=ech-tunnel&name=${SUB_NAME}"
 
     if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
       upload_subscription
