@@ -17,7 +17,7 @@ if source /root/.env; then
     fi
 
     ECH_SERVER="wss://${ARGO_DOMAIN}:443/tunnel"
-    UPLOAD_DATA="ech://server=${ECH_SERVER}&listen=${ECH_LISTEN}&token=${UUID}&dns=${ECH_DNS}&ech=${ECH_URL}&ip=${CF_IP}&name=${SUB_NAME}"
+    UPLOAD_DATA="proxy://server=${ECH_SERVER}&listen=${ECH_LISTEN}&token=${UUID}&dns=${ECH_DNS}&ech=${ECH_URL}&ip=${CF_IP}&executable=ech-tunnel&name=${SUB_NAME}"
 
     if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
       upload_subscription
