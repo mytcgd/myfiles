@@ -1,20 +1,17 @@
 #!/bin/bash
 
-red="\033[1;91m"
-green="\e[1;32m"
-yellow="\e[1;33m"
-purple="\e[1;35m"
-red() { echo -e "\e[1;91m$1\033[0m"; }
-green() { echo -e "\e[1;32m$1\033[0m"; }
-yellow() { echo -e "\e[1;33m$1\033[0m"; }
-purple() { echo -e "\e[1;35m$1\033[0m"; }
+# 定义颜色函数
+red() { echo -e "\e[1;91m$1\e[0m"; }
+green() { echo -e "\e[1;32m$1\e[0m"; }
+yellow() { echo -e "\e[1;33m$1\e[0m"; }
+purple() { echo -e "\e[1;35m$1\e[0m"; }
 # reading() { read -p "$(red "$1")" "$2"; }
 
 export CFPORT=${CFPORT:-'8443'}
 export CF_IP=${CF_IP:-'ip.sb'}
 export FILE_PATH=${FILE_PATH:-'./.tmp'}
-export KEEPALIVE=${KEEPALIVE:-'1'}
-export OPENSERVER=${OPENSERVER:-'0'}
+export KEEPALIVE=${KEEPALIVE:-'true'}
+export ENABLE_ARGO=${ENABLE_ARGO:-'false'}
 export SERVER_IP=${SERVER_IP:-''}
 
 export V_PORT=${V_PORT:-''}
@@ -74,21 +71,23 @@ download_program() {
       ;;
   esac
 
-  if [ ! -f "${program_name}" ]; then
+  # 文件存在且大小大于 0
+  if [ ! -s "${program_name}" ]; then
     if [ -n "${download_url}" ]; then
-      echo "Downloading ${program_name}..." > /dev/null
+      echo "Downloading ${program_name}..."
       if command -v curl &> /dev/null; then
         curl -sSL "${download_url}" -o "${program_name}"
       elif command -v wget &> /dev/null; then
         wget -qO "${program_name}" "${download_url}"
       fi
-      echo "Downloaded ${program_name}" > /dev/null
+      echo "Downloaded ${program_name}"
     else
-      echo "Skipping download for ${program_name}" > /dev/null
+      echo "Skipping download for ${program_name}"
     fi
   else
-    echo "${program_name} already exists, skipping download" > /dev/null
+    echo "${program_name} already exists, skipping download"
   fi
+  chmod +x "$program_name"
 }
 
 initialize_downloads() {
@@ -101,18 +100,11 @@ initialize_downloads() {
         download_program "${FILE_PATH}/npm" "https://github.com/mytcgd/myfiles/releases/download/main/nezha-agentv1_arm" "https://github.com/mytcgd/myfiles/releases/download/main/nezha-agentv1"
         ;;
     esac
-    sleep 3
-    chmod +x ${FILE_PATH}/npm
   fi
 
   download_program "${FILE_PATH}/web" "https://github.com/mytcgd/myfiles/releases/download/main/sing-box_arm" "https://github.com/mytcgd/myfiles/releases/download/main/sing-box"
-  sleep 3
-  chmod +x ${FILE_PATH}/web
-
-  if [ ${OPENSERVER} = "1" ] && [ -n "${V_PORT}" ]; then
+  if [ ${ENABLE_ARGO} = "true" ] && [ -n "${V_PORT}" ]; then
     download_program "${FILE_PATH}/argo" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
-    sleep 3
-    chmod +x ${FILE_PATH}/argo
   else
     green "本次安装不使用argo隧道!"
   fi
@@ -463,7 +455,7 @@ Detect_process() {
 
 keep_alive() {
   while true; do
-    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ ${OPENSERVER} = "1" ] && [ -n "${V_PORT}" ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
+    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ ${ENABLE_ARGO} = "true" ] && [ -n "${V_PORT}" ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
       run_argo
     fi
     sleep 5
@@ -486,7 +478,7 @@ run_processes() {
   # web_randomness=tmp$(tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 3)
   # npm_randomness=tmp$(tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 3)
 
-  if [ ${OPENSERVER} = "1" ] && [ -n "${V_PORT}" ] && [ -e "${FILE_PATH}/argo" ]; then
+  if [ ${ENABLE_ARGO} = "true" ] && [ -n "${V_PORT}" ] && [ -e "${FILE_PATH}/argo" ]; then
     mv ${FILE_PATH}/argo ${FILE_PATH}/${argo_randomness} && sleep 1
     run_argo
     red "argo is running !"
@@ -517,9 +509,9 @@ run_processes() {
   purple "\nvps节点链接如下：\n"
   cat ${FILE_PATH}/tmp.txt
 
-  if [ "${KEEPALIVE}" = "1" ]; then
+  if [ "${KEEPALIVE}" = "true" ]; then
     keep_alive 2>&1 &
-  elif [ "${KEEPALIVE}" = "0" ]; then
+  elif [ "${KEEPALIVE}" = "false" ]; then
     sleep 5
     rm -rf ${FILE_PATH}/${server_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/sconf ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.* ${FILE_PATH}/cert.pem ${FILE_PATH}/private.key
   fi
@@ -665,7 +657,7 @@ upload_subscription() {
 
 export previousargoDomain=""
 upload() {
-  if [ ${KEEPALIVE} = "1" ] && [ ${OPENSERVER} = "1" ] && [ -z "${ARGO_AUTH}" ]; then
+  if [ ${KEEPALIVE} = "true" ] && [ ${ENABLE_ARGO} = "true" ] && [ -z "${ARGO_AUTH}" ]; then
     while true; do
       if [[ "$previousargoDomain" == "$ARGO_DOMAIN" ]]; then
         echo "domain name has not been updated, no need to upload" > /dev/null
@@ -724,7 +716,7 @@ case "$num" in
     *)
     clear
     echo -e "${Error}:请输入正确数字 [1-2]"
-    sleep 5s
+    sleep 5
     menu
     ;;
 esac
