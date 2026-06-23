@@ -13,7 +13,7 @@ purple() { echo -e "\e[1;35m$1\033[0m"; }
 export CFPORT=${CFPORT:-'443'}
 export CF_IP=${CF_IP:-'ip.sb'}
 export FILE_PATH=${FILE_PATH:-'./.tmp'}
-export KEEPALIVE=${KEEPALIVE:-'1'}
+export KEEPALIVE=${KEEPALIVE:-'true'}
 export V_PORT=${V_PORT:-'8080'}
 export VLESS_WSPATH=${VLESS_WSPATH:-'startvl'}
 
@@ -57,21 +57,23 @@ download_program() {
       ;;
   esac
 
-  if [ ! -f "${program_name}" ]; then
+  # 文件存在且大小大于 0
+  if [ ! -s "${program_name}" ]; then
     if [ -n "${download_url}" ]; then
-      echo "Downloading ${program_name}..." > /dev/null
+      echo "Downloading ${program_name}..."
       if command -v curl &> /dev/null; then
         curl -sSL "${download_url}" -o "${program_name}"
       elif command -v wget &> /dev/null; then
         wget -qO "${program_name}" "${download_url}"
       fi
-      echo "Downloaded ${program_name}" > /dev/null
+      echo "Downloaded ${program_name}"
     else
-      echo "Skipping download for ${program_name}" > /dev/null
+      echo "Skipping download for ${program_name}"
     fi
   else
-    echo "${program_name} already exists, skipping download" > /dev/null
+    echo "${program_name} already exists, skipping download"
   fi
+  chmod +x "$program_name"
 }
 
 initialize_downloads() {
@@ -84,17 +86,9 @@ initialize_downloads() {
         download_program "${FILE_PATH}/npm" "https://github.com/mytcgd/myfiles/releases/download/main/nezha-agentv1_arm" "https://github.com/mytcgd/myfiles/releases/download/main/nezha-agentv1"
         ;;
     esac
-    sleep 3
-    chmod +x ${FILE_PATH}/npm
   fi
-
   download_program "${FILE_PATH}/web" "https://github.com/mytcgd/myfiles/releases/download/main/xray_arm" "https://github.com/mytcgd/myfiles/releases/download/main/xray"
-  sleep 3
-  chmod +x ${FILE_PATH}/web
-
   download_program "${FILE_PATH}/argo" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
-  sleep 3
-  chmod +x ${FILE_PATH}/argo
 }
 
 # my_config
@@ -333,9 +327,9 @@ run_processes() {
   purple "\nvps节点链接如下：\n"
   cat ${FILE_PATH}/tmp.txt
 
-  if [ "${KEEPALIVE}" = "1" ]; then
+  if [ "${KEEPALIVE}" = "true" ]; then
     keep_alive 2>&1 &
-  elif [ "${KEEPALIVE}" = "0" ]; then
+  elif [ "${KEEPALIVE}" = "false" ]; then
     sleep 5
     rm -rf ${FILE_PATH}/${argo_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/*.json ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.*
   fi
@@ -427,7 +421,7 @@ upload_subscription() {
 
 export previousargoDomain=""
 upload() {
-  if [ ${KEEPALIVE} = "1" ] && [ -z "${ARGO_AUTH}" ]; then
+  if [ ${KEEPALIVE} = "true" ] && [ -z "${ARGO_AUTH}" ]; then
     while true; do
       if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
         upload_subscription
