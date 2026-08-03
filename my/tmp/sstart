@@ -351,7 +351,7 @@ protocol: http2
 
 ingress:
   - hostname: ${ARGO_DOMAIN}
-    service: http://localhost: ${V_PORT}
+    service: http://localhost:${V_PORT}
     originRequest:
       noTLSVerify: true
   - service: http_status:404
@@ -692,6 +692,7 @@ install_singbox() {
 
 # remove_singbox
 remove_singbox() {
+  pkill bash
   pkill sleep
   pkill tmp
   safe_rm ${FILE_PATH}
