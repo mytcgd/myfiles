@@ -42,6 +42,14 @@ export NEZHA_PORT=${NEZHA_PORT:-'443'}
 export ARGO_DOMAIN=${ARGO_DOMAIN:-''}
 export ARGO_AUTH=${ARGO_AUTH:-''}
 
+safe_rm() {
+  local target
+  for target in "$@"; do
+    [ -z "$target" ] && continue
+    [ -e "$target" ] && safe_rm -- "$target"
+  done
+}
+
 # 建立运行目录
 createfolder() {
   if [ ! -d "$FILE_PATH" ]; then
@@ -51,7 +59,7 @@ createfolder() {
 
 # 清理历史文件
 cleanup_files() {
-  rm -rf ${FILE_PATH}/*
+  safe_rm "${FILE_PATH}"/*
   mkdir -p "${FILE_PATH}/sconf"
 }
 
@@ -513,7 +521,7 @@ run_processes() {
     keep_alive 2>&1 &
   elif [ "${KEEPALIVE}" = "false" ]; then
     sleep 5
-    rm -rf ${FILE_PATH}/${server_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/sconf ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.* ${FILE_PATH}/cert.pem ${FILE_PATH}/private.key
+    safe_rm ${FILE_PATH}/${server_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/sconf ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.* ${FILE_PATH}/cert.pem ${FILE_PATH}/private.key
   fi
 }
 
@@ -635,6 +643,7 @@ general_upload_data() {
 check_hostname_change() {
   if [ -s "${FILE_PATH}/boot.log" ]; then
     export ARGO_DOMAIN=$(cat ${FILE_PATH}/boot.log | grep -o "info.*https://.*trycloudflare.com" | sed "s@.*https://@@g" | tail -n 1)
+    sleep 2
   fi
   general_upload_data
 }
@@ -667,7 +676,7 @@ upload() {
         export previousargoDomain="$ARGO_DOMAIN"
       fi
       sleep 60
-      check_hostname_change && sleep 2
+      check_hostname_change
     done
   else
     upload_subscription
@@ -691,7 +700,7 @@ install_singbox() {
 remove_singbox() {
   pkill sleep
   pkill tmp
-  rm -rf ${FILE_PATH}
+  safe_rm ${FILE_PATH}
   pkill bash
 }
 
