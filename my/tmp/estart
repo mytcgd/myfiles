@@ -31,6 +31,14 @@ export NEZHA_PORT=${NEZHA_PORT:-'443'}
 export ARGO_DOMAIN=${ARGO_DOMAIN:-''}
 export ARGO_AUTH=${ARGO_AUTH:-''}
 
+safe_rm() {
+  local target
+  for target in "$@"; do
+    [ -z "$target" ] && continue
+    [ -e "$target" ] && rm -rf -- "$target"
+  done
+}
+
 # 建立运行目录
 createfolder() {
   if [ ! -d "$FILE_PATH" ]; then
@@ -40,7 +48,7 @@ createfolder() {
 
 # 清理历史文件
 cleanup_files() {
-  rm -rf ${FILE_PATH}/*
+  safe_rm "${FILE_PATH}"/*
 }
 
 # 设置下载
@@ -271,15 +279,20 @@ run_processes() {
     build_urls
   fi
 
-  sleep 3
   purple "\nvps节点链接如下：\n"
-  cat ${FILE_PATH}/tmp.txt
+  while true; do
+    if [ -f "${FILE_PATH}/tmp.txt" ]; then
+       cat "${FILE_PATH}/tmp.txt"
+       break
+    fi
+    sleep 1  # 等待1秒再检测，避免CPU占用过高
+  done
 
   if [ "${KEEPALIVE}" = "true" ]; then
     keep_alive 2>&1 &
   elif [ "${KEEPALIVE}" = "false" ]; then
     sleep 5
-    rm -rf ${FILE_PATH}/${argo_randomness} ${FILE_PATH}/${ech_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/*.json ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.*
+    safe_rm "${FILE_PATH}/${argo_randomness}" "${FILE_PATH}/${ech_randomness}" "${FILE_PATH}/${npm_randomness}" "${FILE_PATH}"/*.json "${FILE_PATH}"/*.yml "${FILE_PATH}"/tunnel.*
   fi
 }
 
@@ -347,7 +360,7 @@ check_hostname_change() {
   UPLOAD_DATA=""
   if [ -s "${FILE_PATH}/boot.log" ]; then
     export ARGO_DOMAIN=$(cat ${FILE_PATH}/boot.log | grep -o "info.*https://.*trycloudflare.com" | sed "s@.*https://@@g" | tail -n 1)
-    sleep 5
+    sleep 2
   fi
   if [ "${ENABLE_ARGO}" = "false" ] && [ -n "${MY_DOMAIN}" ]; then
     export ARGO_DOMAIN="${MY_DOMAIN}"
@@ -384,7 +397,7 @@ upload() {
         export previousargoDomain="$ARGO_DOMAIN"
       fi
       sleep 60
-      check_hostname_change && sleep 2
+      check_hostname_change
     done
   else
     upload_subscription
@@ -406,9 +419,10 @@ install_ech() {
 
 # remove_ech
 remove_ech() {
+  pkill bash
   pkill sleep
   pkill tmp
-  rm -rf ${FILE_PATH}
+  safe_rm "${FILE_PATH}"
   pkill bash
 }
 
