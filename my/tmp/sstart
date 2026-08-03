@@ -331,7 +331,13 @@ STU
             "tag": "direct",
             "type": "direct"
         }
-    ]
+    ],
+    "experimental": {
+        "cache_file": {
+            "enabled": true,
+            "path": "${FILE_PATH}/cache.db"
+        }
+    }
 }
 VWX
   }
@@ -515,7 +521,7 @@ run_processes() {
     keep_alive 2>&1 &
   elif [ "${KEEPALIVE}" = "false" ]; then
     sleep 5
-    safe_rm ${FILE_PATH}/${server_randomness} ${FILE_PATH}/${web_randomness} ${FILE_PATH}/${npm_randomness} ${FILE_PATH}/sconf ${FILE_PATH}/*.yml ${FILE_PATH}/tunnel.* ${FILE_PATH}/cert.pem ${FILE_PATH}/private.key
+    safe_rm "${FILE_PATH}/${server_randomness}" "${FILE_PATH}/${web_randomness}" "${FILE_PATH}/${npm_randomness}" "${FILE_PATH}"/sconf "${FILE_PATH}"/*.yml "${FILE_PATH}"/tunnel.* "${FILE_PATH}"/cert.pem "${FILE_PATH}"/private.key
   fi
 }
 
@@ -692,10 +698,9 @@ install_singbox() {
 
 # remove_singbox
 remove_singbox() {
-  pkill bash
   pkill sleep
   pkill tmp
-  safe_rm ${FILE_PATH}
+  safe_rm "${FILE_PATH}"
   pkill bash
 }
 
