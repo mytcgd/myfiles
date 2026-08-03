@@ -331,13 +331,7 @@ STU
             "tag": "direct",
             "type": "direct"
         }
-    ],
-    "experimental": {
-        "cache_file": {
-            "enabled": true,
-            "path": "${FILE_PATH}/cache.db"
-        }
-    }
+    ]
 }
 VWX
   }
