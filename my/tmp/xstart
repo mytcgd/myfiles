@@ -164,7 +164,7 @@ protocol: http2
 
 ingress:
   - hostname: ${ARGO_DOMAIN}
-    service: http://localhost: ${V_PORT}
+    service: http://localhost:${V_PORT}
     originRequest:
       noTLSVerify: true
   - service: http_status:404
@@ -448,6 +448,7 @@ install_xray() {
 
 # remove_xray
 remove_xray() {
+  pkill bash
   pkill sleep
   pkill tmp
   rm -rf ${FILE_PATH}
