@@ -513,7 +513,7 @@ run_processes() {
     build_urls
   fi
 
-  sleep 3
+  sleep 10
   purple "\nvps节点链接如下：\n"
   cat ${FILE_PATH}/tmp.txt
 
