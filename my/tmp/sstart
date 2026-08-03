@@ -46,7 +46,7 @@ safe_rm() {
   local target
   for target in "$@"; do
     [ -z "$target" ] && continue
-    [ -e "$target" ] && safe_rm -- "$target"
+    [ -e "$target" ] && rm -rf -- "$target"
   done
 }
 
