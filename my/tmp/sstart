@@ -513,9 +513,14 @@ run_processes() {
     build_urls
   fi
 
-  sleep 10
   purple "\nvps节点链接如下：\n"
-  cat ${FILE_PATH}/tmp.txt
+  while true; do
+    if [ -f "${FILE_PATH}/tmp.txt" ]; then
+       cat "${FILE_PATH}/tmp.txt"
+       break
+    fi
+    sleep 1  # 等待1秒再检测，避免CPU占用过高
+  done
 
   if [ "${KEEPALIVE}" = "true" ]; then
     keep_alive 2>&1 &
