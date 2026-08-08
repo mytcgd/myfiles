@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# 定义颜色函数
+red() { echo -e "\e[1;91m$1\e[0m"; }
+green() { echo -e "\e[1;32m$1\e[0m"; }
+yellow() { echo -e "\e[1;33m$1\e[0m"; }
+purple() { echo -e "\e[1;35m$1\e[0m"; }
+# reading() { read -p "$(red "$1")" "$2"; }
+
 export FILE_PATH=${FILE_PATH:-'./.tmp'}
 export ENABLE_ARGO=${ENABLE_ARGO:-'false'}  # true or false true为开启argo。
 export KEEPALIVE=${KEEPALIVE:-'false'}
@@ -197,6 +204,7 @@ run_processes() {
     argo_type
     args
     run_cloudflared
+    red "cloudflared is running !"
     sleep 5
     get_argo_domain && sleep 2
   fi
@@ -208,16 +216,17 @@ run_processes() {
 
   if [ -e "${FILE_PATH}/system-panel" ]; then
     run_panel
+    red "panel is running !"
   fi
 
   if [ "${ENABLE_ARGO}" = "true" ]; then
-      echo "Panel started successfully: http://${ARGO_DOMAIN}"
+      purple "Panel started successfully: http://${ARGO_DOMAIN}"
   else
     if [ -n "${MY_DOMAIN}" ]; then
-      echo "Panel started successfully: http://${MY_DOMAIN}"
+      purple "Panel started successfully: http://${MY_DOMAIN}"
     else
       get_ip_code && sleep 3
-      echo "Panel started successfully: http://${MYIP}:${PORT}"
+      purple "Panel started successfully: http://${MYIP}:${PORT}"
     fi
   fi
 
