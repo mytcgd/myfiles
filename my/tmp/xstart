@@ -34,6 +34,42 @@ safe_rm() {
   done
 }
 
+stop_running_processes() {
+  local process_pid
+  [ -d "$FILE_PATH" ] || return 0
+
+  : > "${FILE_PATH}/stopping"
+
+  # 清理当前 Shell 的后台作业。
+  while read -r process_pid; do
+    [ -n "$process_pid" ] && kill -TERM "$process_pid" 2>/dev/null || true
+  done < <(jobs -pr)
+
+  # 兼容从其他 SSH 会话卸载，只匹配本目录下的 tmp* 进程。
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -TERM "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f -- "${FILE_PATH}/tmp" 2>/dev/null || true)
+
+  # 清理通过 bash <(curl ...) 启动的旧脚本主进程。
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -TERM "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f '(^|[[:space:]])bash[[:space:]]+/dev/fd/[0-9]+' 2>/dev/null || true)
+
+  sleep 1
+
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -KILL "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f -- "${FILE_PATH}/tmp" 2>/dev/null || true)
+
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -KILL "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f '(^|[[:space:]])bash[[:space:]]+/dev/fd/[0-9]+' 2>/dev/null || true)
+}
+
 # 建立运行目录
 createfolder() {
   if [ ! -d "$FILE_PATH" ]; then
@@ -277,7 +313,7 @@ Detect_process() {
 }
 
 keep_alive() {
-  while true; do
+  while [ ! -e "${FILE_PATH}/stopping" ]; do
     if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
       run_argo
     fi
@@ -294,6 +330,7 @@ keep_alive() {
 }
 
 run_processes() {
+  safe_rm "${FILE_PATH}/stopping"
   argo_randomness=tmp$(dd if=/dev/urandom bs=1 count=100 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c 3)
   web_randomness=tmp$(dd if=/dev/urandom bs=1 count=100 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c 3)
   npm_randomness=tmp$(dd if=/dev/urandom bs=1 count=100 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c 3)
@@ -449,8 +486,7 @@ upload() {
 
 # install_xray
 install_xray() {
-  pkill sleep
-  pkill tmp
+  stop_running_processes
   createfolder
   cleanup_files
   initialize_downloads
@@ -461,11 +497,11 @@ install_xray() {
 
 # remove_xray
 remove_xray() {
-  pkill bash
-  pkill sleep
-  pkill tmp
+  stop_running_processes
   safe_rm "${FILE_PATH}"
-  pkill bash
+  pkill -x sleep 2>/dev/null || true
+  green "xray临时节点已卸载"
+  exit 0
 }
 
 menu(){

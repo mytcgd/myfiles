@@ -50,6 +50,39 @@ safe_rm() {
   done
 }
 
+stop_running_processes() {
+  local process_pid
+  [ -d "$FILE_PATH" ] || return 0
+
+  : > "${FILE_PATH}/stopping"
+
+  while read -r process_pid; do
+    [ -n "$process_pid" ] && kill -TERM "$process_pid" 2>/dev/null || true
+  done < <(jobs -pr)
+
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -TERM "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f -- "${FILE_PATH}/tmp" 2>/dev/null || true)
+
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -TERM "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f '(^|[[:space:]])bash[[:space:]]+/dev/fd/[0-9]+' 2>/dev/null || true)
+
+  sleep 1
+
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -KILL "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f -- "${FILE_PATH}/tmp" 2>/dev/null || true)
+
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -KILL "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f '(^|[[:space:]])bash[[:space:]]+/dev/fd/[0-9]+' 2>/dev/null || true)
+}
+
 # 建立运行目录
 createfolder() {
   if [ ! -d "$FILE_PATH" ]; then
@@ -462,7 +495,7 @@ Detect_process() {
 }
 
 keep_alive() {
-  while true; do
+  while [ ! -e "${FILE_PATH}/stopping" ]; do
     if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ ${ENABLE_ARGO} = "true" ] && [ -n "${V_PORT}" ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
       run_argo
     fi
@@ -479,6 +512,7 @@ keep_alive() {
 }
 
 run_processes() {
+  safe_rm "${FILE_PATH}/stopping"
   argo_randomness=tmp$(dd if=/dev/urandom bs=1 count=100 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c 3)
   web_randomness=tmp$(dd if=/dev/urandom bs=1 count=100 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c 3)
   npm_randomness=tmp$(dd if=/dev/urandom bs=1 count=100 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c 3)
@@ -681,7 +715,7 @@ upload() {
         export previousargoDomain="$ARGO_DOMAIN"
       fi
       sleep 60
-      check_hostname_change
+      check_hostname_change && sleep 2
     done
   else
     upload_subscription
@@ -691,8 +725,7 @@ upload() {
 
 # install_singbox
 install_singbox() {
-  pkill sleep
-  pkill tmp
+  stop_running_processes
   createfolder
   cleanup_files
   initialize_downloads
@@ -703,10 +736,11 @@ install_singbox() {
 
 # remove_singbox
 remove_singbox() {
-  pkill sleep
-  pkill tmp
+  stop_running_processes
   safe_rm "${FILE_PATH}"
-  pkill bash
+  pkill -x sleep 2>/dev/null || true
+  green "singbox临时节点已卸载"
+  exit 0
 }
 
 menu(){
