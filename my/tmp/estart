@@ -397,7 +397,7 @@ upload() {
         export previousargoDomain="$ARGO_DOMAIN"
       fi
       sleep 60
-      check_hostname_change
+      check_hostname_change && sleep 2
     done
   else
     upload_subscription
