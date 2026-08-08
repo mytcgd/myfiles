@@ -87,13 +87,41 @@ initialize_downloads() {
   download_program "${FILE_PATH}/system-panel" "https://github.com/kahunama/myfile/releases/download/main/system-panel-arm" "https://github.com/kahunama/myfile/releases/download/main/system-panel"
 }
 
-# run
+# 启动面板和 cloudflared；进程由当前脚本的后台作业管理。
 run_panel() {
-  ${FILE_PATH}/${panel_randomness} >/dev/null 2>&1 &
+  "${FILE_PATH}/${panel_randomness}" >/dev/null 2>&1 &
 }
 
 run_cloudflared() {
-  ${FILE_PATH}/${argo_randomness} $args >/dev/null 2>&1 &
+  "${FILE_PATH}/${argo_randomness}" $args >/dev/null 2>&1 &
+}
+
+stop_running_processes() {
+  local job_pid
+  local process_pid
+
+  [ -d "$FILE_PATH" ] || return 0
+
+  # 先创建停止标记，防止 keep_alive 在停止期间重新拉起服务。
+  : > "${FILE_PATH}/stopping"
+
+  # 终止当前脚本启动的后台作业，包含 keep_alive、面板和 cloudflared。
+  while read -r job_pid; do
+    [ -n "$job_pid" ] && kill -TERM "$job_pid" 2>/dev/null || true
+  done < <(jobs -pr)
+
+  # 兼容从另一条 Shell/SSH 会话执行卸载：只匹配本目录下的 tmp* 程序。
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -TERM "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f -- "${FILE_PATH}/tmp" 2>/dev/null || true)
+
+  # 等待进程退出；仍存活的目标进程再强制结束。
+  sleep 1
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -KILL "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f -- "${FILE_PATH}/tmp" 2>/dev/null || true)
 }
 
 Detect_process() {
@@ -110,7 +138,7 @@ Detect_process() {
 }
 
 keep_alive() {
-  while true; do
+  while [ ! -e "${FILE_PATH}/stopping" ]; do
     if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ "${ENABLE_ARGO}" = "true" ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
       run_cloudflared
       sleep 5
@@ -213,6 +241,7 @@ get_argo_domain() {
 }
 
 run_processes() {
+  safe_rm "${FILE_PATH}/stopping"
   panel_randomness=tmp$(dd if=/dev/urandom bs=1 count=100 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c 3)
   argo_randomness=tmp$(dd if=/dev/urandom bs=1 count=100 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c 3)
   if [ "${ENABLE_ARGO}" = "true" ] && [ -e "${FILE_PATH}/cloudflared" ]; then
@@ -257,8 +286,10 @@ run_processes() {
 
 # install_panel
 install_panel() {
-  pkill sleep
-  pkill tmp
+  # 若已有本脚本启动的实例，先精确停止，避免重复运行。
+  if [ -d "$FILE_PATH" ]; then
+    stop_running_processes
+  fi
   createfolder
   cleanup_files
   initialize_downloads
@@ -267,10 +298,11 @@ install_panel() {
 
 # remove_panel
 remove_panel() {
-  pkill bash
-  pkill sleep
-  pkill tmp
-  safe_rm "${FILE_PATH}"
+  if [ -d "$FILE_PATH" ]; then
+    stop_running_processes
+    safe_rm "$FILE_PATH"
+  fi
+  green "一键系统面板已卸载"
 }
 
 menu(){
