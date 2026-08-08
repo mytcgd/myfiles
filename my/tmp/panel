@@ -25,6 +25,14 @@ export MY_DOMAIN=${MY_DOMAIN:-''} # ENABLE_ARGO为false时，有值则使用cdn 
 export LOCAL_DOMAIN=${LOCAL_DOMAIN:-''}
 export CLIENT_TYPE=${CLIENT_TYPE:-'v2'}
 
+safe_rm() {
+  local target
+  for target in "$@"; do
+    [ -z "$target" ] && continue
+    [ -e "$target" ] && rm -rf -- "$target"
+  done
+}
+
 # 建立运行目录
 createfolder() {
   if [ ! -d "$FILE_PATH" ]; then
