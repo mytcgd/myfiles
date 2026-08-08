@@ -32,6 +32,11 @@ createfolder() {
   fi
 }
 
+# 清理历史文件
+cleanup_files() {
+  safe_rm "${FILE_PATH}"/*
+}
+
 # Download Dependency Files
 download_program() {
   local program_name="$1"
@@ -234,8 +239,11 @@ run_processes() {
     fi
   fi
 
-  if [ -n "${KEEPALIVE}" ] && [ "${KEEPALIVE}" = "true" ]; then
+  if [ "${KEEPALIVE}" = "true" ]; then
     keep_alive 2>&1 &
+  elif [ "${KEEPALIVE}" = "false" ]; then
+    sleep 5
+    safe_rm "${FILE_PATH}/${argo_randomness}" "${FILE_PATH}/${panel_randomness}" "${FILE_PATH}"/tunnel.*
   fi
 }
 
@@ -244,6 +252,7 @@ install_panel() {
   pkill sleep
   pkill tmp
   createfolder
+  cleanup_files
   initialize_downloads
   run_processes
 }
