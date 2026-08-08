@@ -1,27 +1,8 @@
 #!/bin/bash
 
-# ==================== 优雅退出：Ctrl+C 时清理所有子进程 ====================
-_CLEANUP_DONE=false
-cleanup() {
-    $_CLEANUP_DONE && exit 0
-    _CLEANUP_DONE=true
-    echo ""
-    echo "正在停止所有服务..."
-    # 杀掉当前 shell 的所有直接子进程
-    local child_pids=$(pgrep -P $$ 2>/dev/null)
-    [ -n "$child_pids" ] && kill $child_pids 2>/dev/null
-    # 只杀 cloudflared（用 -x 精确匹配进程名，避免误杀自身）
-    pkill -x "cloudflared" 2>/dev/null
-    # 等待子进程结束
-    sleep 1
-    echo "所有服务已停止"
-    exit 0
-}
-trap cleanup SIGINT SIGTERM SIGHUP
-
 export FILE_PATH=${FILE_PATH:-'./.tmp'}
 export ENABLE_ARGO=${ENABLE_ARGO:-'false'}  # true or false true为开启argo。
-export KEEPALIVE=${KEEPALIVE:-'true'}
+export KEEPALIVE=${KEEPALIVE:-'false'}
 export PORT=${PORT:-'8080'}
 export PANEL_PASSWORD=${PANEL_PASSWORD:-'123456'}
 export ARGO_DOMAIN=${ARGO_DOMAIN:-''}
@@ -37,9 +18,12 @@ export MY_DOMAIN=${MY_DOMAIN:-''} # ENABLE_ARGO为false时，有值则使用cdn 
 export LOCAL_DOMAIN=${LOCAL_DOMAIN:-''}
 export CLIENT_TYPE=${CLIENT_TYPE:-'v2'}
 
-if [ ! -d "$FILE_PATH" ]; then
-  mkdir -p "$FILE_PATH"
-fi
+# 建立运行目录
+createfolder() {
+  if [ ! -d "$FILE_PATH" ]; then
+    mkdir -p "${FILE_PATH}"
+  fi
+}
 
 # Download Dependency Files
 download_program() {
@@ -242,11 +226,47 @@ run_processes() {
   fi
 }
 
-# main
-main() {
+# install_panel
+install_panel() {
+  pkill sleep
+  pkill tmp
+  createfolder
   initialize_downloads
   run_processes
-  # 等待所有后台进程，而不是 tail -f /dev/null
-  wait
 }
-main
+
+# remove_panel
+remove_panel() {
+  pkill bash
+  pkill sleep
+  pkill tmp
+  safe_rm "${FILE_PATH}"
+}
+
+menu(){
+yellow "1、安装一键系统面板"
+yellow " "
+yellow "2、御载一键系统面板"
+yellow " "
+yellow "0、退出脚本"
+yellow " "
+read -p " 请输入数字 [0-2]: " num
+case "$num" in
+    1)
+    install_panel
+    ;;
+    2)
+    remove_panel
+    ;;
+    0)
+    exit 1
+    ;;
+    *)
+    clear
+    echo -e "${Error}:请输入正确数字 [1-2]"
+    sleep 5
+    menu
+    ;;
+esac
+}
+menu
