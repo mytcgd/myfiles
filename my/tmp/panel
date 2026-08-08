@@ -302,7 +302,12 @@ remove_panel() {
     stop_running_processes
     safe_rm "$FILE_PATH"
   fi
+
+  # 清理停止过程中可能脱离父 Shell 的 sleep 子进程。
+  # 仅在卸载时执行，避免影响正常安装运行。
+  pkill -x sleep 2>/dev/null || true
   green "一键系统面板已卸载"
+  exit 0
 }
 
 menu(){
