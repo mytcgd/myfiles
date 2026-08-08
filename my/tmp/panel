@@ -116,12 +116,23 @@ stop_running_processes() {
     [ -n "$process_pid" ] && kill -TERM "$process_pid" 2>/dev/null || true
   done < <(pgrep -f -- "${FILE_PATH}/tmp" 2>/dev/null || true)
 
+  # bash <(curl ...) 会显示为 bash /dev/fd/N；清理旧的远程脚本主进程。
+  # 排除当前卸载脚本，避免在执行 exit 0 前杀掉自己。
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -TERM "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f '(^|[[:space:]])bash[[:space:]]+/dev/fd/[0-9]+' 2>/dev/null || true)
+
   # 等待进程退出；仍存活的目标进程再强制结束。
   sleep 1
   while read -r process_pid; do
     [ "$process_pid" = "$$" ] && continue
     [ -n "$process_pid" ] && kill -KILL "$process_pid" 2>/dev/null || true
   done < <(pgrep -f -- "${FILE_PATH}/tmp" 2>/dev/null || true)
+  while read -r process_pid; do
+    [ "$process_pid" = "$$" ] && continue
+    [ -n "$process_pid" ] && kill -KILL "$process_pid" 2>/dev/null || true
+  done < <(pgrep -f '(^|[[:space:]])bash[[:space:]]+/dev/fd/[0-9]+' 2>/dev/null || true)
 }
 
 Detect_process() {
