@@ -21,7 +21,7 @@ trap cleanup SIGINT SIGTERM SIGHUP
 
 export FILE_PATH=${FILE_PATH:-'./.tmp'}
 export ENABLE_ARGO=${ENABLE_ARGO:-'true'}  # true or false true为开启argo。
-export KEEPALIVE=${KEEPALIVE:-'false'}
+export KEEPALIVE=${KEEPALIVE:-'true'}
 export PORT=${PORT:-'8080'}
 export PANEL_PASSWORD=${PANEL_PASSWORD:-'123456'}
 export ARGO_DOMAIN=${ARGO_DOMAIN:-''}
