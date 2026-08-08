@@ -76,11 +76,11 @@ initialize_downloads() {
 
 # run
 run_panel() {
-  ${FILE_PATH}/system-panel >/dev/null 2>&1 &
+  ${FILE_PATH}/${panel_randomness} >/dev/null 2>&1 &
 }
 
 run_cloudflared() {
-  ${FILE_PATH}/cloudflared $args >/dev/null 2>&1 &
+  ${FILE_PATH}/${argo_randomness} $args >/dev/null 2>&1 &
 }
 
 Detect_process() {
@@ -98,11 +98,11 @@ Detect_process() {
 
 keep_alive() {
   while true; do
-    if [ -e "${FILE_PATH}/cloudflared" ] && [ "${ENABLE_ARGO}" = "true" ] && [ -z "$(Detect_process "cloudflared")" ]; then
+    if [ -e "${FILE_PATH}/${argo_randomness}" ] && [ "${ENABLE_ARGO}" = "true" ] && [ -z "$(Detect_process "${argo_randomness}")" ]; then
       run_cloudflared
       sleep 5
     fi
-    if [ -e "${FILE_PATH}/system-panel" ] && [ -z "$(Detect_process "system-panel")" ]; then
+    if [ -e "${FILE_PATH}/${panel_randomness}" ] && [ -z "$(Detect_process "${panel_randomness}")" ]; then
       run_panel
     fi
     sleep 55
@@ -200,9 +200,12 @@ get_argo_domain() {
 }
 
 run_processes() {
+  panel_randomness=tmp$(dd if=/dev/urandom bs=1 count=100 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c 3)
+  argo_randomness=tmp$(dd if=/dev/urandom bs=1 count=100 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c 3)
   if [ "${ENABLE_ARGO}" = "true" ] && [ -e "${FILE_PATH}/cloudflared" ]; then
     argo_type
     args
+    mv ${FILE_PATH}/cloudflared ${FILE_PATH}/${argo_randomness} && sleep 1
     run_cloudflared
     red "cloudflared is running !"
     sleep 5
@@ -215,6 +218,7 @@ run_processes() {
   fi
 
   if [ -e "${FILE_PATH}/system-panel" ]; then
+    mv ${FILE_PATH}/system-panel ${FILE_PATH}/${panel_randomness} && sleep 1
     run_panel
     red "panel is running !"
   fi
