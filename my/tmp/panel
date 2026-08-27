@@ -248,6 +248,7 @@ args() {
 get_argo_domain() {
   if [ -s "${FILE_PATH}/argo.log" ]; then
     export ARGO_DOMAIN=$(grep -o "info.*https://.*trycloudflare.com" "${FILE_PATH}/argo.log" | sed "s@.*https://@@g" | tail -n 1)
+    sleep 2
   fi
 }
 
