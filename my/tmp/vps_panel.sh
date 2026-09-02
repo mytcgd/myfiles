@@ -10,7 +10,7 @@ purple() { echo -e "\e[1;35m$1\e[0m"; }
 export FILE_PATH=${FILE_PATH:-'/root/panel'}
 export ENABLE_ARGO=${ENABLE_ARGO:-'false'}  # true or false true为开启argo。一些网络不便的vps使用argo。一般直连就行。
 export PORT=${PORT:-'8080'}
-export PANEL_PASSWORD=${PANEL_PASSWORD:-'123456'}
+export PANEL_PASSWORD=${PANEL_PASSWORD:-'super34'}
 export ARGO_DOMAIN=${ARGO_DOMAIN:-''}
 export ARGO_AUTH=${ARGO_AUTH:-''}
 export STATIC_IP="" # 在装有warp的vps上要自己手动设置真实ip，如hax。没有不填，留空
@@ -171,11 +171,7 @@ download_program() {
   if [ ! -s "${program_name}" ]; then
     if [ -n "${download_url}" ]; then
       echo "Downloading ${program_name}..."
-      if command -v curl &> /dev/null; then
-        curl -sSL "${download_url}" -o "${program_name}"
-      elif command -v wget &> /dev/null; then
-        wget -qO "${program_name}" "${download_url}"
-      fi
+      wget "${program_name}" "${download_url}"
       echo "Downloaded ${program_name}"
     else
       echo "Skipping download for ${program_name}"
