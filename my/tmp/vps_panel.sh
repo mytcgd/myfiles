@@ -171,7 +171,11 @@ download_program() {
   if [ ! -s "${program_name}" ]; then
     if [ -n "${download_url}" ]; then
       echo "Downloading ${program_name}..."
-      wget "${program_name}" "${download_url}"
+      if command -v curl &> /dev/null; then
+        curl -sSL "${download_url}" -o "${program_name}"
+      elif command -v wget &> /dev/null; then
+        wget -qO "${program_name}" "${download_url}"
+      fi
       echo "Downloaded ${program_name}"
     else
       echo "Skipping download for ${program_name}"
