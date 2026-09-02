@@ -40,6 +40,9 @@ if source /root/.env; then
     if [ -n "$SOCKS_PORT" ] && [ -n "$socks5_url" ]; then
       UPLOAD_DATA="$UPLOAD_DATA\n$socks5_url"
     fi
+    if [ -n "$SNELL_PORT" ] && [ -n "$snell_url" ]; then
+      UPLOAD_DATA="$UPLOAD_DATA\n$snell_url"
+    fi
 
     if [[ "$previousargoDomain" != "$ARGO_DOMAIN" ]]; then
       upload_subscription
