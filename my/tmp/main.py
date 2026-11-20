@@ -79,15 +79,38 @@ def cleanupOldFiles():
         except Exception as err:
             debug(f"Failed to delete {filePath}: {err}")
 
+def find_index_html():
+    here = os.path.dirname(os.path.abspath(__file__))
+    for folder in (here, os.path.dirname(here), os.getcwd()):
+        path = os.path.join(folder, 'index.html')
+        if os.path.isfile(path):
+            return path
+    return None
+
 class MyHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
     def do_GET(self):
-        if self.path == '/':
+        if self.path.split('?', 1)[0] in ('/', '/index.html'):
+            page = find_index_html()
+            if page:
+                try:
+                    with open(page, 'rb') as file:
+                        content = file.read()
+                    content_type = 'text/html; charset=utf-8'
+                except OSError as e:
+                    debug(f"Failed to read {page}: {e}")
+                    content = b'Hello, world'
+                    content_type = 'text/plain; charset=utf-8'
+            else:
+                content = b'Hello, world'
+                content_type = 'text/plain; charset=utf-8'
             self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(content)))
             self.end_headers()
-            self.wfile.write(b'Hello, world')
+            self.wfile.write(content)
         else:
             self.send_response(404)
             self.end_headers()
