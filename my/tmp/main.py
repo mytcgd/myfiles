@@ -19,7 +19,7 @@ INTERVAL_SECONDS = int(os.environ.get("TIME", 100))
 ENABLE_HTTPSERVER = os.environ.get('ENABLE_HTTPSERVER', 'true').lower() == 'true'
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
 KEEPALIVE = os.environ.get('KEEPALIVE', 'false').lower() == 'true'
-PORT = int(os.environ.get('PORT', 3000))
+PORT = int(os.environ.get('PORT', 10014))
 MYIP_URL = os.environ.get('MYIP_URL', '')
 HY2_SNI = os.environ.get('HY2_SNI', 'https://bing.com')
 HY2_PORT = int(os.environ.get('SERVER_PORT') or os.environ.get('HY2_PORT') or 10014)
