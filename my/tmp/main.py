@@ -16,7 +16,7 @@ import asyncio
 
 FILE_PATH = os.environ.get('FILE_PATH', './.cache')
 INTERVAL_SECONDS = int(os.environ.get("TIME", 100))
-ENABLE_HTTPSERVER = os.environ.get('ENABLE_HTTPSERVER', 'false').lower() == 'true'
+ENABLE_HTTPSERVER = os.environ.get('ENABLE_HTTPSERVER', 'true').lower() == 'true'
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
 KEEPALIVE = os.environ.get('KEEPALIVE', 'false').lower() == 'true'
 PORT = int(os.environ.get('PORT', 3000))
@@ -122,13 +122,13 @@ def start_http_server():
         server = HTTPServer(('0.0.0.0', PORT), MyHandler)
         server.timeout = 0.5
         http_server = server
-        info(f"✅ server is running on port {PORT}")
+        debug(f"✅ server is running on port {PORT}")
         server.serve_forever()
     except OSError as e:
         debug(f"HTTP server failed on port {PORT}: {e}")
     except Exception as e:
         try:
-            print(f"HTTP server stopped: {e}")
+            debug(f"HTTP server stopped: {e}")
         except (BrokenPipeError, OSError):
             pass
 
