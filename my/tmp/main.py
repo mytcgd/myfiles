@@ -534,6 +534,7 @@ signal.signal(signal.SIGINT, gracefulExit)
 signal.signal(signal.SIGTERM, gracefulExit)
 
 async def main():
+    info("Discord Bot Start...")
     createFolder(FILE_PATH)
     cleanupOldFiles()
 
