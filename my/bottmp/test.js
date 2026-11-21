@@ -23,7 +23,6 @@ const os = require('os');
 const fs = require("fs");
 const path = require("path");
 const http = require('http');
-const https = require('https');
 const exec = require("child_process").exec;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -75,7 +74,7 @@ function createFolder(folderPath) {
     }
 }
 
-const pathsToDelete = ['web.so', 'npm.so', 'server.crt', 'server.key', 'log.txt'];
+const pathsToDelete = ['web.so', 'npm.so', 'server.crt', 'server.key'];
 function cleanupOldFiles() {
     for (const file of pathsToDelete) {
         const filePath = path.join(FILE_PATH, file);
@@ -101,17 +100,6 @@ function httpserver() {
         if (req.url === '/') {
             res.writeHead(200);
             res.end('hello world');
-        } else if (req.url === '/sub') {
-            const subFilePath = FILE_PATH + '/log.txt';
-            fs.readFile(subFilePath, 'utf8', (error, data) => {
-                if (error) {
-                    res.writeHead(500);
-                    res.end('Error reading file');
-                } else {
-                    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-                    res.end(data);
-                }
-            });
         } else {
             res.writeHead(404);
             res.end('Not found');
@@ -122,7 +110,7 @@ function httpserver() {
         debug(`HTTP server error on port ${PORT}: ${error.message}`);
     });
     server.listen(PORT, () => {
-        info(`server is running on port : ${PORT}`);
+        debug(`server is running on port : ${PORT}`);
     });
 }
 
@@ -529,11 +517,6 @@ function generateLinks() {
     }
 
     UPLOAD_DATA = `hysteria2://${UUID}@${myaddress}:${HY2_PORT}/?sni=www.bing.com&alpn=h3&insecure=1#${ISP}-${SUB_NAME}`;
-    if (UPLOAD_DATA) {
-        const filePath = path.join(FILE_PATH, 'log.txt');
-        fs.writeFileSync(filePath, Buffer.from(UPLOAD_DATA).toString('base64'));
-        debug(Buffer.from(UPLOAD_DATA).toString('base64'));
-    }
     return UPLOAD_DATA;
 }
 
@@ -642,7 +625,7 @@ process.on('SIGINT', () => gracefulExit('SIGINT'));
 process.on('SIGTERM', () => gracefulExit('SIGTERM'));
 
 async function main() {
-    info("Starting Server...")
+    info("Discord Bot Start...")
     createFolder(FILE_PATH);
     cleanupOldFiles();
     await downloadFiles();
