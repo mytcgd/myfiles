@@ -1,13 +1,13 @@
 const FILE_PATH = process.env.FILE_PATH || './.npm';
 const intervalInseconds = process.env.TIME || 100;
-const ENABLE_HTTPSERVER = (process.env.ENABLE_HTTPSERVER || 'false').toLowerCase() === 'true';
+const ENABLE_HTTPSERVER = (process.env.ENABLE_HTTPSERVER || 'true').toLowerCase() === 'true';
 const DEBUG = (process.env.DEBUG || 'false').toLowerCase() === 'true';
 const KEEPALIVE = (process.env.KEEPALIVE || 'false').toLowerCase() === 'true';
+const PORT = process.env.PORT || 3000;
+const HY2_PORT = process.env.HY2_PORT || process.env.SERVER_PORT || 3001;
 const HY2_SNI = process.env.HY2_SNI || 'https://bing.com';
-const HY2_PORT = process.env.HY2_PORT || 3001;
 const LOCAL_DOMAIN = process.env.LOCAL_DOMAIN || '';
 
-const PORT = process.env.PORT || process.env.SERVER_PORT || 3000;
 const UUID = process.env.UUID || '7160b696-dd5e-42e3-a024-145e92cec916';
 const NEZHA_SERVER = process.env.NEZHA_SERVER || '';
 const NEZHA_PORT = process.env.NEZHA_PORT || '443';
