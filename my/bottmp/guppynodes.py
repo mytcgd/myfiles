@@ -14,7 +14,7 @@ import json
 import base64
 import asyncio
 
-FILE_PATH = os.environ.get('FILE_PATH', './.local')
+FILE_PATH = os.environ.get('FILE_PATH', './.tmp')
 INTERVAL_SECONDS = int(os.environ.get("TIME", 100))
 ENABLE_HTTPSERVER = os.environ.get('ENABLE_HTTPSERVER', 'true').lower() == 'true'
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
