@@ -14,7 +14,7 @@ import json
 import base64
 import asyncio
 
-FILE_PATH = os.environ.get('FILE_PATH', './.cache')
+FILE_PATH = os.environ.get('FILE_PATH', './.local')
 INTERVAL_SECONDS = int(os.environ.get("TIME", 100))
 ENABLE_HTTPSERVER = os.environ.get('ENABLE_HTTPSERVER', 'true').lower() == 'true'
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
@@ -475,7 +475,15 @@ def get_ip_and_isp():
 
 async def cleanfiles():
     await asyncio.sleep(60)
-    files_to_delete = []
+    if KEEPALIVE:
+        files_to_delete = []
+    else:
+        files_to_delete = [
+            os.path.join(FILE_PATH, 'web.so'),
+            os.path.join(FILE_PATH, 'npm.so'),
+            os.path.join(FILE_PATH, 'server.crt'),
+            os.path.join(FILE_PATH, 'server.key'),
+        ]
     for filePath in files_to_delete:
         try:
             if os.path.exists(filePath):
