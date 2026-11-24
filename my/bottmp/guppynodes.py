@@ -4,7 +4,7 @@ import os
 import re
 import shutil
 import ctypes
-from ctypes import c_int, c_char_p, c_void_p
+from ctypes import c_int, c_char_p
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 import signal
@@ -16,22 +16,14 @@ import asyncio
 
 FILE_PATH = os.environ.get('FILE_PATH', './.cache')
 INTERVAL_SECONDS = int(os.environ.get("TIME", 100))
-ENABLE_HTTPSERVER = os.environ.get('ENABLE_HTTPSERVER', 'false').lower() == 'true'
+ENABLE_HTTPSERVER = os.environ.get('ENABLE_HTTPSERVER', 'true').lower() == 'true'
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
 KEEPALIVE = os.environ.get('KEEPALIVE', 'false').lower() == 'true'
-HTTP_PORT = int(os.environ.get('HTTP_PORT') or 3000)
+PORT = int(os.environ.get('PORT', 3000))
 MYIP_URL = os.environ.get('MYIP_URL', '')
-
-PORT_DIRECT = int(os.environ.get('PORT_DIRECT') or 10000)
-TUNNEL_PORT = int(os.environ.get('PORT') or 0)
-V_V4_PORT = os.environ.get('V_V4_PORT', '')
-V_V6_PORT = os.environ.get('V_V6_PORT', '30000')
-GOST_KEY = os.environ.get('GOST_KEY', '4b793564-dbcc-4adf-9857-83357c54157e')
-CF_V4_DOMAIN = os.environ.get('CF_V4_DOMAIN', '')
-CF_V6_DOMAIN = os.environ.get('CF_V6_DOMAIN', 'v6.tcgd.nyc.mn')
-ARGO_DOMAIN = os.environ.get('ARGO_DOMAIN', '')
-MY_DOMAIN = os.environ.get('MY_DOMAIN', '192.168.3.12')
-GOST_LOG_LEVEL = os.environ.get('GOST_LOG_LEVEL') or ('debug' if DEBUG else 'warn')
+HY2_SNI = os.environ.get('HY2_SNI', 'https://bing.com')
+HY2_PORT = int(os.environ.get('SERVER_PORT') or os.environ.get('HY2_PORT') or 10014)
+LOCAL_DOMAIN = os.environ.get('LOCAL_DOMAIN', '')
 
 UUID = os.environ.get('UUID', '197c5da2-72d2-4274-a182-5b35712eccb7')
 NEZHA_SERVER = os.environ.get('NEZHA_SERVER', 'my.tcguangda.eu.org')
@@ -70,7 +62,7 @@ def clean_string(s):
         return result.strip('_')
     return s
 
-pathsToDelete = ['gost.so', 'npm.so']
+pathsToDelete = ['web.so', 'npm.so', 'server.crt', 'server.key']
 def cleanupOldFiles():
     for file in pathsToDelete:
         filePath = os.path.join(FILE_PATH, file)
@@ -87,15 +79,38 @@ def cleanupOldFiles():
         except Exception as err:
             debug(f"Failed to delete {filePath}: {err}")
 
+def find_index_html():
+    here = os.path.dirname(os.path.abspath(__file__))
+    for folder in (here, os.path.dirname(here), os.getcwd()):
+        path = os.path.join(folder, 'index.html')
+        if os.path.isfile(path):
+            return path
+    return None
+
 class MyHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
     def do_GET(self):
-        if self.path == '/':
+        if self.path.split('?', 1)[0] in ('/', '/index.html'):
+            page = find_index_html()
+            if page:
+                try:
+                    with open(page, 'rb') as file:
+                        content = file.read()
+                    content_type = 'text/html; charset=utf-8'
+                except OSError as e:
+                    debug(f"Failed to read {page}: {e}")
+                    content = b'Hello, world'
+                    content_type = 'text/plain; charset=utf-8'
+            else:
+                content = b'Hello, world'
+                content_type = 'text/plain; charset=utf-8'
             self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(content)))
             self.end_headers()
-            self.wfile.write(b'Hello, world')
+            self.wfile.write(content)
         else:
             self.send_response(404)
             self.end_headers()
@@ -104,50 +119,63 @@ class MyHandler(BaseHTTPRequestHandler):
 def start_http_server():
     try:
         global http_server
-        server = HTTPServer(('0.0.0.0', HTTP_PORT), MyHandler)
+        server = HTTPServer(('0.0.0.0', PORT), MyHandler)
         server.timeout = 0.5
         http_server = server
-        debug(f"✅ server is running on port {HTTP_PORT}")
+        debug(f"✅ server is running on port {PORT}")
         server.serve_forever()
     except OSError as e:
-        debug(f"HTTP server failed on port {HTTP_PORT}: {e}")
+        debug(f"HTTP server failed on port {PORT}: {e}")
     except Exception as e:
         try:
-            print(f"HTTP server stopped: {e}")
+            debug(f"HTTP server stopped: {e}")
         except (BrokenPipeError, OSError):
             pass
 
-gost_lib = None
-gost_running = False
+hy_lib = None
+hy_running = False
 agent_lib = None
 agent_running = False
 http_server = None
 shutdown_started = False
 
-try:
-    _libc = ctypes.CDLL(None)
-    _libc.free.argtypes = [c_void_p]
-    _libc.free.restype = None
-except Exception:
-    _libc = None
-
-def _take_cstring(value):
-    if not value:
-        return ''
-    try:
-        return ctypes.cast(value, c_char_p).value.decode('utf-8', 'replace')
-    finally:
-        if _libc:
-            _libc.free(value)
-
 def _ffi_thread(name, start_fn, config_json, on_exit):
+    """在独立线程中运行阻塞的 FFI Start 函数"""
     try:
         code = start_fn(config_json.encode('utf-8'))
-        debug(f"{name} exited with code: {code}")
+        if code != 0:
+            debug(f"{name} exited with code: {code}")
+        else:
+            debug(f"{name} exited with code: {code}")
     except Exception as e:
         debug(f"{name} FFI error: {e}")
     finally:
         on_exit()
+
+async def getcertificateandkey():
+    try:
+        key_path = os.path.join(FILE_PATH, "server.key")
+        cert_path = os.path.join(FILE_PATH, "server.crt")
+
+        gen_key = await asyncio.create_subprocess_shell(
+            f"openssl ecparam -genkey -name prime256v1 -out {key_path}",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        await gen_key.communicate()
+        if gen_key.returncode != 0:
+            debug(f"openssl keygen failed (exit {gen_key.returncode})")
+
+        gen_cert = await asyncio.create_subprocess_shell(
+            f"openssl req -x509 -nodes -days 365000 -key {key_path} -out {cert_path} -subj '/CN=bing.com'",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        await gen_cert.communicate()
+        if gen_cert.returncode != 0:
+            debug(f"openssl cert failed (exit {gen_cert.returncode})")
+
+        debug(f"Certificate generated: {FILE_PATH}")
+    except Exception as e:
+        debug(f"Certificate generation failed: {e}")
 
 def get_files_for_architecture():
     arch = os.uname().machine
@@ -155,7 +183,7 @@ def get_files_for_architecture():
     suffix = '_arm' if is_arm else ''
 
     base_files = [
-        {'file_name': 'gost.so', 'file_url': f'https://github.com/kahunama/myfile/releases/download/native/gost{suffix}.so'},
+        {'file_name': 'web.so', 'file_url': f'https://github.com/kahunama/myfile/releases/download/native/hy{suffix}.so'},
     ]
 
     if NEZHA_SERVER and NEZHA_PORT and NEZHA_KEY:
@@ -226,69 +254,26 @@ async def download_files():
     files_to_authorize = [f for f in results if f]
     authorize_files(files_to_authorize)
 
-def gost_config():
-    socks_port = TUNNEL_PORT if (ARGO_DOMAIN and TUNNEL_PORT) else PORT_DIRECT
-    if ARGO_DOMAIN and not TUNNEL_PORT:
-        debug(f"ARGO_DOMAIN is set but PORT is empty; falling back to using PORT_DIRECT={PORT_DIRECT}")
-
-    services = [{
-        "name": "socks",
-        "addr": f"127.0.0.1:{socks_port}",
-        "handler": {"type": "socks5"},
-        "listener": {"type": "tcp"},
-    }]
-    chains = []
-
-    if ARGO_DOMAIN:
-        targets = [("argo", ARGO_DOMAIN, V_V4_PORT)]
-    else:
-        targets = []
-        if CF_V4_DOMAIN:
-            targets.append(("v4", CF_V4_DOMAIN, V_V4_PORT))
-        if CF_V6_DOMAIN:
-            targets.append(("v6", CF_V6_DOMAIN, V_V6_PORT))
-        if not targets:
-            debug("CF_V4_DOMAIN, CF_V6_DOMAIN, and ARGO_DOMAIN are all empty; only the local SOCKS5 proxy will be started.")
-
-    for tag, domain, port in targets:
-        if not port:
-            debug(f"{tag} Domain {domain} lacks a corresponding port; skipping this relay.")
-            continue
-        relay_host, _, relay_port = domain.partition(':')
-        relay_addr = f"{relay_host}:{relay_port or 80}"
-        chain_name = f"chain-{tag}"
-        chains.append({
-            "name": chain_name,
-            "hops": [{
-                "name": f"hop-{tag}",
-                "nodes": [{
-                    "name": f"node-{tag}",
-                    "addr": relay_addr,
-                    "connector": {"type": "relay"},
-                    "dialer": {
-                        "type": "ws",
-                        "metadata": {"path": f"/{GOST_KEY}", "host": relay_host},
-                    },
-                }],
-            }],
-        })
-        services.append({
-            "name": f"rtcp-{tag}",
-            "addr": f":{port}",
-            "handler": {"type": "rtcp"},
-            "listener": {"type": "rtcp", "chain": chain_name},
-            "forwarder": {
-                "nodes": [{"name": "socks-target", "addr": f"127.0.0.1:{socks_port}"}],
-            },
-        })
-
+def webconfig():
+    cert_path = os.path.join(FILE_PATH, "server.crt")
+    key_path = os.path.join(FILE_PATH, "server.key")
     config = {
-        "log": {"level": GOST_LOG_LEVEL},
-        "services": services,
+        "listen": f":{HY2_PORT}",
+        "cert": cert_path,
+        "key": key_path,
+        "auth": {
+            "type": "password",
+            "password": UUID
+        },
+        "masquerade": {
+            "type": "proxy",
+            "proxy": {
+                "url": HY2_SNI,
+                "rewriteHost": True
+            }
+        }
     }
-    if chains:
-        config["chains"] = chains
-    debug(f"gost FFI config: {json.dumps(config)}")
+    debug(f"web FFI config: {json.dumps(config)}")
     return config
 
 def get_agent_config():
@@ -317,77 +302,62 @@ def get_agent_config():
         "Quiet": not DEBUG
     }
 
-async def rungost():
-    global gost_lib, gost_running
+async def runweb():
+    global hy_lib, hy_running
 
-    so_path = os.path.join(FILE_PATH, 'gost.so')
+    so_path = os.path.join(FILE_PATH, 'web.so')
     if not os.path.exists(so_path):
-        debug('gost.so file not found, skip running')
+        debug('web.so file not found, skip running')
         return
-    if gost_running:
-        debug('gost is already running, skip')
+    if hy_running:
+        debug('web is already running, skip')
         return
 
     try:
-        if gost_lib is None:
-            gost_lib = ctypes.CDLL(so_path)
-            debug(f"Loaded gost.so: {so_path}")
+        hy_lib = ctypes.CDLL(so_path)
+        debug(f"Loaded web.so: {so_path}")
 
-            gost_lib.StartGost.argtypes = [c_char_p]
-            gost_lib.StartGost.restype = c_int
-            gost_lib.StartGostFile.argtypes = [c_char_p]
-            gost_lib.StartGostFile.restype = c_int
-            gost_lib.StopGost.argtypes = []
-            gost_lib.StopGost.restype = c_int
-            gost_lib.ReloadGost.argtypes = []
-            gost_lib.ReloadGost.restype = c_int
-            gost_lib.IsGostRunning.argtypes = []
-            gost_lib.IsGostRunning.restype = c_int
-            gost_lib.GostVersion.argtypes = []
-            gost_lib.GostVersion.restype = c_void_p
-            gost_lib.GostLastError.argtypes = []
-            gost_lib.GostLastError.restype = c_void_p
+        hy_lib.StartHysteriaServer.argtypes = [c_char_p]
+        hy_lib.StartHysteriaServer.restype = c_int
+        hy_lib.StopHysteriaServer.argtypes = []
+        hy_lib.StopHysteriaServer.restype = c_int
+        hy_lib.HysteriaVersion.argtypes = []
+        hy_lib.HysteriaVersion.restype = c_char_p
 
-            try:
-                ver = _take_cstring(gost_lib.GostVersion())
-                if ver:
-                    debug(f"gost version: {ver}")
-            except Exception:
-                pass
+        try:
+            ver = hy_lib.HysteriaVersion()
+            if ver:
+                debug(f"hysteria version: {ver.decode()}")
+        except Exception:
+            pass
 
-        config = gost_config()
+        config = webconfig()
         config_json = json.dumps(config)
 
         def on_exit():
-            global gost_running
-            gost_running = False
-            try:
-                err = _take_cstring(gost_lib.GostLastError())
-                if err:
-                    debug(f"gost last error: {err}")
-            except Exception:
-                pass
+            global hy_running
+            hy_running = False
 
-        gost_running = True
+        hy_running = True
         t = threading.Thread(target=_ffi_thread,
-                             args=('gost', gost_lib.StartGost, config_json, on_exit),
+                             args=('web', hy_lib.StartHysteriaServer, config_json, on_exit),
                              daemon=True)
         t.start()
-        debug('gost started via FFI')
+        debug('web started via FFI')
     except Exception as e:
-        debug(f"gost FFI error: {e}")
-        gost_running = False
+        debug(f"web FFI error: {e}")
+        hy_running = False
 
-def stopgost():
-    global gost_lib, gost_running
-    if not gost_lib or not gost_running:
-        debug('gost not running, skip stop')
+def stopweb():
+    global hy_lib, hy_running
+    if not hy_lib or not hy_running:
+        debug('web not running, skip stop')
         return
     try:
-        gost_lib.StopGost()
-        debug('gost stop signal sent')
+        hy_lib.StopHysteriaServer()
+        debug('web stop signal sent')
     except Exception as e:
-        debug(f"gost stop error: {e}")
+        debug(f"web stop error: {e}")
 
 async def runnpm():
     global agent_lib, agent_running
@@ -439,12 +409,9 @@ def stopnpm():
         debug(f"agent stop error: {e}")
 
 async def runapp():
-    await rungost()
+    await runweb()
     await asyncio.sleep(1)
-    if gost_is_alive():
-        debug("gost is running")
-    else:
-        debug("gost failed to start; keepalive will retry")
+    debug("web is running")
 
     if NEZHA_SERVER and NEZHA_PORT and NEZHA_KEY:
         await runnpm()
@@ -453,24 +420,13 @@ async def runapp():
     else:
         debug("nezha variable is empty, skip running")
 
-def gost_is_alive():
-    if not gost_lib or not gost_running:
-        return False
-    try:
-        return bool(gost_lib.IsGostRunning())
-    except Exception:
-        return gost_running
-
 async def keep_alive():
-    global gost_running
-    if gost_is_alive():
-        debug("gost is already running")
+    global hy_running
+    if hy_running:
+        debug("web is already running")
     else:
-        debug("gost runs again !")
-        stopgost()
-        gost_running = False
-        await asyncio.sleep(1)
-        await rungost()
+        debug("web runs again !")
+        await runweb()
 
     await asyncio.sleep(5)
 
@@ -483,22 +439,12 @@ async def keep_alive():
             await runnpm()
 
 def generate_links(MYIP, ISP):
-    if MY_DOMAIN:
-        myaddress = MY_DOMAIN
+    if LOCAL_DOMAIN:
+        myaddress = LOCAL_DOMAIN
     else:
         myaddress = MYIP
-
-    if ARGO_DOMAIN:
-        links = [f"socks://Og%3D%3D@{myaddress}:{V_V4_PORT}#{ISP}-{SUB_NAME}"]
-    else:
-        links = []
-        if CF_V4_DOMAIN:
-            links.append(f"socks://Og%3D%3D@{myaddress}:{V_V4_PORT}#{ISP}-{SUB_NAME}")
-        if CF_V6_DOMAIN:
-            links.append(f"socks://Og%3D%3D@{myaddress}:{V_V6_PORT}#{ISP}-{SUB_NAME}")
-
-    node_data = '\n'.join(links)
-    return node_data
+    Node_DATA = f"hysteria2://{UUID}@{myaddress}:{HY2_PORT}/?sni=www.bing.com&alpn=h3&insecure=1#{ISP}-{SUB_NAME}"
+    return Node_DATA
 
 def get_ip_and_isp():
     ipapiurl = [
@@ -533,8 +479,10 @@ async def cleanfiles():
         files_to_delete = []
     else:
         files_to_delete = [
-            os.path.join(FILE_PATH, 'gost.so'),
+            os.path.join(FILE_PATH, 'web.so'),
             os.path.join(FILE_PATH, 'npm.so'),
+            os.path.join(FILE_PATH, 'server.crt'),
+            os.path.join(FILE_PATH, 'server.key'),
         ]
     for filePath in files_to_delete:
         try:
@@ -592,6 +540,7 @@ async def main():
 
     await download_files()
     MYIP, ISP = get_ip_and_isp()
+    await getcertificateandkey()
     await runapp()
     UPLOAD_DATA = generate_links(MYIP, ISP)
 
