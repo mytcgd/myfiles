@@ -475,15 +475,7 @@ def get_ip_and_isp():
 
 async def cleanfiles():
     await asyncio.sleep(60)
-    if KEEPALIVE:
-        files_to_delete = []
-    else:
-        files_to_delete = [
-            os.path.join(FILE_PATH, 'web.so'),
-            os.path.join(FILE_PATH, 'npm.so'),
-            os.path.join(FILE_PATH, 'server.crt'),
-            os.path.join(FILE_PATH, 'server.key'),
-        ]
+    files_to_delete = []
     for filePath in files_to_delete:
         try:
             if os.path.exists(filePath):
